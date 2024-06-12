@@ -1,17 +1,14 @@
-﻿using System.Net;
-using System;
-using System.Net.Http;
-using System.Security.Cryptography;
-using System.IO.Compression;
+﻿using System.IO.Compression;
 using YamlDotNet.RepresentationModel;
-using System.Security.Cryptography.X509Certificates;
+using EveDataCollator.Eve;
+
 
 namespace EveDataCollator
 {
     internal class Program
     {
         static private Dictionary<int, string> nameIDDictionary;
-
+        static private Dictionary<int, Region> regions;
 
 
         static async Task Main(string[] args)
@@ -59,8 +56,13 @@ namespace EveDataCollator
             // load the string database
             LoadNameDictionary(dataFolder);
 
+
+
             // collate all the universe files
             ParseUniverse(dataFolder);
+
+            //
+            Console.WriteLine($"Parsed {regions.Count} regions");
         }
 
 
@@ -143,6 +145,8 @@ namespace EveDataCollator
         // Parse Universe files
         static void ParseUniverse(string rootFolder)
         {
+            regions = new Dictionary<int, Region>();
+
             // universe is in .\universe\eve\<region>\<constellation>\<system>
 
 
@@ -150,7 +154,9 @@ namespace EveDataCollator
             var matchingRegionFiles = Directory.EnumerateFiles(rootFolder, "region.yaml", SearchOption.AllDirectories);
             foreach (string regionFile in matchingRegionFiles)
             {
-                ParseRegionYaml(regionFile);
+                Region r = ParseRegionYaml(regionFile);
+                regions[r.Id] = r; 
+
 
                 // get the constellations within this folder
                 string regionDir = Path.GetDirectoryName(regionFile);
@@ -160,7 +166,9 @@ namespace EveDataCollator
                 var matchingConstellationFiles = Directory.EnumerateFiles(regionDir, "constellation.yaml", SearchOption.AllDirectories);
                 foreach (string constellationFile in matchingConstellationFiles)
                 {
-                    ParseConstellationYaml(constellationFile);
+                    Constellation c = ParseConstellationYaml(constellationFile);
+                    r.Constellations.Add(c);
+
 
                     // get the systems within this folder
                     string constellationDir = Path.GetDirectoryName(constellationFile);
@@ -170,7 +178,8 @@ namespace EveDataCollator
                     var matchingSystemFiles = Directory.EnumerateFiles(constellationDir, "solarSystem.yaml", SearchOption.AllDirectories);
                     foreach (string systemFile in matchingSystemFiles)
                     {
-                        ParseSystemYaml(systemFile);
+                        SolarSystem s = ParseSolarSystemYaml(systemFile);
+                        c.SolarSystems.Add(s);
                     }
                 }
             }
@@ -178,7 +187,7 @@ namespace EveDataCollator
 
 
         // Parse the region
-        static void ParseRegionYaml(string yamlFile)
+        static Region ParseRegionYaml(string yamlFile)
         {
             // The region YAML is in the format : 
             // center
@@ -203,12 +212,20 @@ namespace EveDataCollator
             YamlScalarNode regionIDNode = (YamlScalarNode)root.Children["regionID"];
             int regionID = int.Parse(regionIDNode.Value);
 
-            Console.WriteLine($"Found Region : {nameIDDictionary[regionID]} ({regionID})");
+            Region r = new Region()
+            {
+                Name = nameIDDictionary[regionID],
+                Id = regionID,
+                Constellations = new List<Constellation>(),
+            };
+
+            return r;
+
         }
 
 
         // Parse the constellation
-        static void ParseConstellationYaml(string yamlFile)
+        static Constellation ParseConstellationYaml(string yamlFile)
         {
             // The constellation YAML is in the format : 
             // center
@@ -230,12 +247,19 @@ namespace EveDataCollator
             YamlScalarNode constellationIDNode = (YamlScalarNode)root.Children["constellationID"];
             int constellationID = int.Parse(constellationIDNode.Value);
 
-            Console.WriteLine($"    - Found constellation : {nameIDDictionary[constellationID]} ({constellationID})");
+            Constellation c = new Constellation()
+            {
+                Id = constellationID,
+                Name = nameIDDictionary[constellationID],
+                SolarSystems = new List<SolarSystem>()
+            };
+
+            return c;
         }
 
 
         // Parse the system
-        static void ParseSystemYaml(string yamlFile)
+        static SolarSystem ParseSolarSystemYaml(string yamlFile)
         {
             using var sr = new StreamReader(yamlFile);
             var yamlStream = new YamlStream();
@@ -246,7 +270,13 @@ namespace EveDataCollator
             YamlScalarNode solarSystemIDNode = (YamlScalarNode)root.Children["solarSystemID"];
             int solarSystemID = int.Parse(solarSystemIDNode.Value);
 
-            Console.WriteLine($"        - Found System : {nameIDDictionary[solarSystemID]} ({solarSystemID})");
+            SolarSystem s = new SolarSystem()
+            {
+                Id = solarSystemID,
+                Name = nameIDDictionary[solarSystemID]
+            };
+
+            return s;
         }
     }
 }

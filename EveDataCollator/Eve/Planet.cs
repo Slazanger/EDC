@@ -6,11 +6,9 @@ using System.Threading.Tasks;
 
 namespace EveDataCollator.Eve
 {
-    public class Constellation
+    public class Planet
     {
         public string Name { get; set; }
         public int Id { get; set; }
-
-        public List<SolarSystem> SolarSystems { get; set; }
     }
 }
