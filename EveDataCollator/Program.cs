@@ -1,6 +1,9 @@
 ﻿using System.IO.Compression;
 using YamlDotNet.RepresentationModel;
 using EveDataCollator.Eve;
+using System.Numerics;
+using System.Diagnostics;
+using System;
 
 
 namespace EveDataCollator
@@ -273,9 +276,54 @@ namespace EveDataCollator
             SolarSystem s = new SolarSystem()
             {
                 Id = solarSystemID,
-                Name = nameIDDictionary[solarSystemID]
+                Name = nameIDDictionary[solarSystemID],
+                Planets = new List<Planet>()
             };
 
+            // parse the planets
+            YamlMappingNode planetRootNote = (YamlMappingNode)root.Children["planets"];
+            foreach (var pn in planetRootNote.Children)
+            {
+                int planetID = int.Parse((string)pn.Key);
+
+                YamlMappingNode planetInfoNode = (YamlMappingNode)pn.Value;
+
+                YamlScalarNode typeIDNode = (YamlScalarNode)planetInfoNode.Children["typeID"];
+                int planetTypeID = int.Parse(typeIDNode.Value);
+
+                Planet p = new Planet()
+                {
+                    Id = planetID,
+                    Name = nameIDDictionary[planetID],
+                    TypeId = planetTypeID,
+                    Moons = new List<Moon>()
+                };
+                s.Planets.Add(p);
+
+                // parse the moons
+                if(planetInfoNode.Children.Keys.Contains("moons"))
+                {
+                    YamlMappingNode moonsRootNode = (YamlMappingNode)planetInfoNode.Children["moons"];
+                    foreach (var mn in moonsRootNode)
+                    {
+                        int moonID = int.Parse((string)mn.Key);
+                        YamlMappingNode moonInfoNode = (YamlMappingNode)pn.Value;
+
+                        YamlScalarNode moonTypeIDNode = (YamlScalarNode)moonInfoNode.Children["typeID"];
+                        int moonTypeID = int.Parse(moonTypeIDNode.Value);
+
+                        Moon moon = new Moon()
+                        {
+                            Id = moonID,
+                            Name = nameIDDictionary[moonID],
+                            TypeId = moonTypeID
+                        };
+
+                        p.Moons.Add(moon);
+
+                    }
+                }
+            }
             return s;
         }
     }

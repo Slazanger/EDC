@@ -11,6 +11,6 @@ namespace EveDataCollator.Eve
         public string Name { get; set; }
         public int  Id { get; set; }
 
-        List<Planet> Planets { get; set; }
+        public List<Planet> Planets { get; set; }
     }
 }
