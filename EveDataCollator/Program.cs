@@ -27,7 +27,7 @@ namespace EveDataCollator
             await DownloadChecksum(checksumUrl, checksumLocal);
 
             bool skipDL = ChecksumIsUnchanged(previousChecksum, checksumLocal);
-            skipDL = true;
+            //skipDL = true;
             
             // TODO : make this less developer specific
             if(skipDL)
@@ -46,7 +46,7 @@ namespace EveDataCollator
                 await DownloadSDE(SDEUrl, SDELocal);
 
                 // extract SDE zip
-                ZipFile.ExtractToDirectory(SDELocal, dataFolder);
+                ZipFile.ExtractToDirectory(SDELocal, dataFolder, true);
             }
 
             // load the string database
