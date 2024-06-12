@@ -11,40 +11,49 @@ namespace EveDataCollator
     internal class Program
     {
         static private Dictionary<int, string> nameIDDictionary;
-        static private string checksumLocal = $"{System.AppContext.BaseDirectory}checksum";
-        static private string previousChecksum = $"{System.AppContext.BaseDirectory}previous-checksum";
+
 
 
         static async Task Main(string[] args)
         {
             string checksumUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/checksum";
             string SDEUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/sde.zip";
-            string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
-            string downloadFolder = $"{System.AppContext.BaseDirectory}{timestamp}";
-            string dataFolder = $"{System.AppContext.BaseDirectory}data";
-            string SDELocal = $"{downloadFolder}\\sde.zip";
 
-            await DownloadChecksum(checksumUrl, checksumLocal);
 
-            bool skipDL = ChecksumIsUnchanged(previousChecksum, checksumLocal);
+            // check the current SDE
+            string currentSDEChecksum = await GetCurrentSDECheckSum(checksumUrl);
 
-            if(skipDL)
+
+            // check if we already have this
+            string dataFolder = $"{System.AppContext.BaseDirectory}{currentSDEChecksum}";
+            string SDELocal = $"{dataFolder}\\sde.zip";
+            bool downloadSDE = false;
+
+            if (!Directory.Exists(dataFolder))
             {
-                dataFolder = $"{System.AppContext.BaseDirectory}data";
-                SDELocal = $"{dataFolder}\\sde.zip";
-                
-                Console.WriteLine($"Download skipped, Hash unchanged.");
+                downloadSDE = true;
+                Directory.CreateDirectory(dataFolder);
             }
             else
             {
-                // create the download directory
-                Directory.CreateDirectory(timestamp);
+                if (!File.Exists(SDELocal))
+                {
+                    downloadSDE = true;
+                }
+            }
 
+            // if we dont have the local file, download it
+            if(downloadSDE)
+            {
                 // download latest SDE
                 await DownloadSDE(SDEUrl, SDELocal);
 
                 // extract SDE zip
                 ZipFile.ExtractToDirectory(SDELocal, dataFolder, true);
+            }
+            else
+            {
+                Console.WriteLine($"Skipping download and using {dataFolder}");
             }
 
             // load the string database
@@ -54,13 +63,35 @@ namespace EveDataCollator
             ParseUniverse(dataFolder);
         }
 
-        // Get the checksum file from CCP
-        static async Task DownloadChecksum(string checksumUrl, string localFile)
+
+        // get the current SDE Checksum from the 
+        static async Task<string> GetCurrentSDECheckSum(string checksumUrl)
         {
-            Console.WriteLine($"Downloading checksum file : {checksumUrl}");
-            await DownloadFile(checksumUrl, localFile);
-            Console.WriteLine($"Downloaded to {localFile}");
+            // the checksum file contains a list of the contents
+            // however the sde.zip is not the MD5 hash of the sde file
+            // but is a hash of the contents incase the zip file re-orders
+            // and they need re-publish the same file :|
+
+            // so for now just assume the 2 match until this gets expanded
+
+            string checksum = "Unknown";
+            using (var client = new HttpClient())
+            {
+                string content = await client.GetStringAsync(checksumUrl);
+                
+                string[] lines = content.Split('\n');
+                foreach (string line in lines)
+                {
+                    if (line.Contains("sde.zip"))
+                    {
+                        checksum = line.Split(" ")[0];
+                        break;
+                    }
+                }
+            }
+            return checksum;
         }
+
 
         // Get the latest SDE from CCP
         static async Task DownloadSDE(string SDEUrl, string localFile)
@@ -68,21 +99,11 @@ namespace EveDataCollator
             Console.WriteLine($"Downloading Latest SDE : {SDEUrl}");
             await DownloadFile(SDEUrl, localFile);
             Console.WriteLine($"Downloaded to {localFile}");
-            File.WriteAllText(previousChecksum, CalculateMD5OfFile(localFile));
-        }
 
-        static bool ChecksumIsUnchanged(string previousChecksumPath, string currentChecksumPath)
-        {
-            if (!File.Exists(currentChecksumPath) || !File.Exists(previousChecksumPath) )
-            {
-                return false;
-            }
-            string previousChecksum = File.ReadAllText(previousChecksumPath);
-            string currentChecksum = File.ReadAllText(currentChecksumPath);
-
-            return currentChecksum.Contains(previousChecksum);
         }
-        
+       
+
+        // download file
         static async Task DownloadFile(string fileUrl, string localFile)
         {
             using var httpClient = new HttpClient();
@@ -91,17 +112,6 @@ namespace EveDataCollator
             await responseStream.CopyToAsync(fileStream);
         }
 
-        static string CalculateMD5OfFile(string filePath)
-        {
-            using (var md5 = MD5.Create())
-            {
-                using (var stream = File.OpenRead(filePath))
-                {
-                    byte[] hash = md5.ComputeHash(stream);
-                    return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
-                }
-            }
-        }
 
         // parse and create the id to name dictionary
         static void LoadNameDictionary(string rootFolder)
