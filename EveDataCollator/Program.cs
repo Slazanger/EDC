@@ -27,9 +27,7 @@ namespace EveDataCollator
             await DownloadChecksum(checksumUrl, checksumLocal);
 
             bool skipDL = ChecksumIsUnchanged(previousChecksum, checksumLocal);
-            //skipDL = true;
-            
-            // TODO : make this less developer specific
+
             if(skipDL)
             {
                 dataFolder = $"{System.AppContext.BaseDirectory}data";
@@ -75,6 +73,10 @@ namespace EveDataCollator
 
         static bool ChecksumIsUnchanged(string previousChecksumPath, string currentChecksumPath)
         {
+            if (!File.Exists(currentChecksumPath) || !File.Exists(previousChecksumPath) )
+            {
+                return false;
+            }
             string previousChecksum = File.ReadAllText(previousChecksumPath);
             string currentChecksum = File.ReadAllText(currentChecksumPath);
 
