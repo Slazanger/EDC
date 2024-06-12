@@ -1,6 +1,7 @@
 ﻿using System.Net;
 using System;
 using System.Net.Http;
+using System.Security.Cryptography;
 using System.IO.Compression;
 using YamlDotNet.RepresentationModel;
 using System.Security.Cryptography.X509Certificates;
@@ -10,21 +11,31 @@ namespace EveDataCollator
     internal class Program
     {
         static private Dictionary<int, string> nameIDDictionary;
+        static private string checksumLocal = $"{System.AppContext.BaseDirectory}checksum";
+        static private string previousChecksum = $"{System.AppContext.BaseDirectory}previous-checksum";
 
 
         static async Task Main(string[] args)
         {
+            string checksumUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/checksum";
             string SDEUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/sde.zip";
             string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
-            string dataFolder = $"{System.AppContext.BaseDirectory}{timestamp}";
-            string SDELocal = $"{dataFolder}/sde.zip";
+            string downloadFolder = $"{System.AppContext.BaseDirectory}{timestamp}";
+            string dataFolder = $"{System.AppContext.BaseDirectory}data";
+            string SDELocal = $"{downloadFolder}\\sde.zip";
 
+            await DownloadChecksum(checksumUrl, checksumLocal);
+
+            bool skipDL = ChecksumIsUnchanged(previousChecksum, checksumLocal);
+            //skipDL = true;
+            
             // TODO : make this less developer specific
-            bool skipDL = true;
             if(skipDL)
             {
-                dataFolder = $"{System.AppContext.BaseDirectory}dev";
+                dataFolder = $"{System.AppContext.BaseDirectory}data";
                 SDELocal = $"{dataFolder}\\sde.zip";
+                
+                Console.WriteLine($"Download skipped, Hash unchanged.");
             }
             else
             {
@@ -35,7 +46,7 @@ namespace EveDataCollator
                 await DownloadSDE(SDEUrl, SDELocal);
 
                 // extract SDE zip
-                ZipFile.ExtractToDirectory(SDELocal, dataFolder);
+                ZipFile.ExtractToDirectory(SDELocal, dataFolder, true);
             }
 
             // load the string database
@@ -45,20 +56,50 @@ namespace EveDataCollator
             ParseUniverse(dataFolder);
         }
 
+        // Get the checksum file from CCP
+        static async Task DownloadChecksum(string checksumUrl, string localFile)
+        {
+            Console.WriteLine($"Downloading checksum file : {checksumUrl}");
+            await DownloadFile(checksumUrl, localFile);
+            Console.WriteLine($"Downloaded to {localFile}");
+        }
 
         // Get the latest SDE from CCP
         static async Task DownloadSDE(string SDEUrl, string localFile)
         {
             Console.WriteLine($"Downloading Latest SDE : {SDEUrl}");
-
-            using var httpClient = new HttpClient();
-            using var responseStream = await httpClient.GetStreamAsync(SDEUrl);
-            using var fileStream = new FileStream(localFile, FileMode.CreateNew);
-            await responseStream.CopyToAsync(fileStream);
-
+            await DownloadFile(SDEUrl, localFile);
             Console.WriteLine($"Downloaded to {localFile}");
+            File.WriteAllText(previousChecksum, CalculateMD5OfFile(localFile));
         }
 
+        static bool ChecksumIsUnchanged(string previousChecksumPath, string currentChecksumPath)
+        {
+            string previousChecksum = File.ReadAllText(previousChecksumPath);
+            string currentChecksum = File.ReadAllText(currentChecksumPath);
+
+            return currentChecksum.Contains(previousChecksum);
+        }
+        
+        static async Task DownloadFile(string fileUrl, string localFile)
+        {
+            using var httpClient = new HttpClient();
+            using var responseStream = await httpClient.GetStreamAsync(fileUrl);
+            using var fileStream = new FileStream(localFile, FileMode.OpenOrCreate);
+            await responseStream.CopyToAsync(fileStream);
+        }
+
+        static string CalculateMD5OfFile(string filePath)
+        {
+            using (var md5 = MD5.Create())
+            {
+                using (var stream = File.OpenRead(filePath))
+                {
+                    byte[] hash = md5.ComputeHash(stream);
+                    return BitConverter.ToString(hash).Replace("-", "").ToLowerInvariant();
+                }
+            }
+        }
 
         // parse and create the id to name dictionary
         static void LoadNameDictionary(string rootFolder)
