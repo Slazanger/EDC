@@ -4,15 +4,14 @@ using EveDataCollator.Eve;
 using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
 using System.Transactions;
-
+using EveDataCollator.EDCEF;
 
 namespace EveDataCollator
 {
     internal class Program
     {
-        static private Dictionary<int, string> nameIDDictionary;
-        static private Dictionary<int, Region> regions;
-
+        static private Dictionary<int, string> nameIDDictionary = default;
+        static private Dictionary<int, Region> regions = default;
 
         static async Task Main(string[] args)
         {
@@ -129,7 +128,8 @@ namespace EveDataCollator
             Console.WriteLine($"Parsed {regions.Count} regions");
 
 
-            ExportUniverseToDB(dataFolder, regions.Values.ToList());
+            //ExportUniverseToDB(dataFolder, regions.Values.ToList());
+            ExportUniverseToEfDb(regions.Values.ToList());
 
         }
 
@@ -216,7 +216,6 @@ namespace EveDataCollator
             regions = new Dictionary<int, Region>();
 
             // universe is in .\universe\eve\<region>\<constellation>\<system>
-
 
             // regions
             var matchingRegionFiles = Directory.EnumerateFiles(rootFolder, "region.yaml", SearchOption.AllDirectories);
@@ -473,6 +472,41 @@ namespace EveDataCollator
             };
 
             return asteroidBelt;
+        }
+
+        static void ExportUniverseToEfDb(List<Region> regionList) 
+        {
+            using (var context = new EdcDbContext())
+            {
+                context.Database.EnsureCreated();
+                
+                foreach (var region in regionList)
+                {
+                    context.Regions.Add(region);
+
+                    foreach (var constellation in region.Constellations)
+                    {
+                        context.Constellations.Add(constellation);
+
+                        foreach (var system in constellation.SolarSystems)
+                        {
+                            context.SolarSystems.Add(system);
+
+                            foreach (var planet in system.Planets)
+                            {
+                                context.Planets.Add(planet);
+
+                                foreach (var moon in planet.Moons)
+                                {
+                                    context.Moons.Add(moon);
+                                }
+                            }
+                        }
+                    }
+                }
+
+                context.SaveChanges();
+            }
         }
 
         // export 

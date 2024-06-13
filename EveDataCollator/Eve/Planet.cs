@@ -8,10 +8,10 @@ namespace EveDataCollator.Eve
 {
     public class Planet
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = String.Empty;
         public int Id { get; set; }
         public int TypeId { get; set; }
-        public List<AsteroidBelt> AsteroidBelts { get; set; }
-        public List<Moon> Moons { get; set; }
+        public List<AsteroidBelt> AsteroidBelts { get; set; } = new ();
+        public List<Moon> Moons { get; set; } = new ();
     }
 }
