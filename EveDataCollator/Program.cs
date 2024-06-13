@@ -482,23 +482,59 @@ namespace EveDataCollator
                 
                 foreach (var region in regionList)
                 {
-                    context.Regions.Add(region);
+                    if (context.Regions.Any(r => r.Id == region.Id))
+                    {
+                        context.Regions.Update(region);
+                    }
+                    else
+                    {
+                        context.Regions.Add(region);   
+                    }
 
                     foreach (var constellation in region.Constellations)
                     {
-                        context.Constellations.Add(constellation);
+                        
+                        if (context.Constellations.Any(c => c.Id == constellation.Id))
+                        {
+                            context.Constellations.Update(constellation);
+                        }
+                        else
+                        {
+                            context.Constellations.Add(constellation);   
+                        }
 
                         foreach (var system in constellation.SolarSystems)
                         {
-                            context.SolarSystems.Add(system);
+                            if (context.SolarSystems.Any(s => s.Id == system.Id))
+                            {
+                                context.SolarSystems.Update(system);
+                            }
+                            else
+                            {
+                                context.SolarSystems.Add(system);   
+                            }
 
                             foreach (var planet in system.Planets)
                             {
-                                context.Planets.Add(planet);
+                                if (context.Planets.Any(p => p.Id == planet.Id))
+                                {
+                                    context.Planets.Update(planet);
+                                }
+                                else
+                                {
+                                    context.Planets.Add(planet);   
+                                }
 
                                 foreach (var moon in planet.Moons)
                                 {
-                                    context.Moons.Add(moon);
+                                    if (context.Moons.Any(m => m.Id == moon.Id))
+                                    {
+                                        context.Moons.Update(moon);
+                                    }
+                                    else
+                                    {
+                                        context.Moons.Add(moon);   
+                                    }
                                 }
                             }
                         }
