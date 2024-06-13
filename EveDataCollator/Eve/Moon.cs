@@ -8,7 +8,7 @@ namespace EveDataCollator.Eve
 {
     public class Moon
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = String.Empty;
         public int Id { get; set; }
         public int TypeId { get; set; }
     }

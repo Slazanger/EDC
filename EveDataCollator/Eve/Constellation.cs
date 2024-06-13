@@ -8,9 +8,9 @@ namespace EveDataCollator.Eve
 {
     public class Constellation
     {
-        public string Name { get; set; }
+        public string Name { get; set; } = String.Empty;
         public int Id { get; set; }
 
-        public List<SolarSystem> SolarSystems { get; set; }
+        public List<SolarSystem> SolarSystems { get; set; } = new();
     }
 }
