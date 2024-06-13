@@ -342,25 +342,7 @@ namespace EveDataCollator
                     YamlMappingNode asteroidBeltsRootNode = (YamlMappingNode)planetInfoNode.Children["asteroidBelts"];
                     foreach (var ab in asteroidBeltsRootNode)
                     {
-                        // AsteroidBelts are part of the solarsystem/planets YAML and the format is:
-                        // position
-                        //      - X,Y,Z
-                        // statistics
-                        // typeID
-
-                        int asteroidBeltID = int.Parse((string)ab.Key);
-                        YamlMappingNode asteroidBeltInfoNode = (YamlMappingNode)ab.Value;
-
-                        YamlScalarNode asteroidBeltTypeIDNode = (YamlScalarNode)asteroidBeltInfoNode.Children["typeID"];
-                        int asteroidBeltTypeID = int.Parse(asteroidBeltTypeIDNode.Value);
-
-                        AsteroidBelt asteroidBelt = new AsteroidBelt()
-                        {
-                            Id = asteroidBeltID,
-                            TypeId = asteroidBeltTypeID
-                        };
-                        
-                        p.AsteroidBelts.Add(asteroidBelt);
+                        p.AsteroidBelts.Add(ParseAsteroidBeltYaml(ab));
                     }
                 }
 
@@ -370,33 +352,62 @@ namespace EveDataCollator
                     YamlMappingNode moonsRootNode = (YamlMappingNode)planetInfoNode.Children["moons"];
                     foreach (var mn in moonsRootNode)
                     {
-                        // Moons are part of the solarsystem/planets YAML and the format is:
-                        // planetAttributes
-                        // position
-                        //      - X,Y,Z
-                        // radius
-                        // statistics
-                        // typeID
-                        
-                        int moonID = int.Parse((string)mn.Key);
-                        YamlMappingNode moonInfoNode = (YamlMappingNode)pn.Value;
-
-                        YamlScalarNode moonTypeIDNode = (YamlScalarNode)moonInfoNode.Children["typeID"];
-                        int moonTypeID = int.Parse(moonTypeIDNode.Value);
-
-                        Moon moon = new Moon()
-                        {
-                            Id = moonID,
-                            Name = nameIDDictionary[moonID],
-                            TypeId = moonTypeID
-                        };
-
-                        p.Moons.Add(moon);
-
+                        p.Moons.Add(ParseMoonYaml(mn));
                     }
                 }
             }
             return s;
+        }
+
+        // parse a moon
+        static Moon ParseMoonYaml(KeyValuePair<YamlNode, YamlNode> moonNode)
+        {
+            // Moons are part of the solarsystem/planets YAML and the format is:
+            // planetAttributes
+            // position
+            //      - X,Y,Z
+            // radius
+            // statistics
+            // typeID
+                        
+            int moonID = int.Parse((string)moonNode.Key);
+            YamlMappingNode moonInfoNode = (YamlMappingNode)moonNode.Value;
+
+            YamlScalarNode moonTypeIDNode = (YamlScalarNode)moonInfoNode.Children["typeID"];
+            int moonTypeID = int.Parse(moonTypeIDNode.Value);
+
+            Moon moon = new Moon()
+            {
+                Id = moonID,
+                Name = nameIDDictionary[moonID],
+                TypeId = moonTypeID
+            };
+
+            return moon;
+        }
+        
+        // parse an asteroidBelt
+        static AsteroidBelt ParseAsteroidBeltYaml(KeyValuePair<YamlNode, YamlNode> asteroidBeltNode)
+        {
+            // AsteroidBelts are part of the solarsystem/planets YAML and the format is:
+            // position
+            //      - X,Y,Z
+            // statistics
+            // typeID
+
+            int asteroidBeltID = int.Parse((string)asteroidBeltNode.Key);
+            YamlMappingNode asteroidBeltInfoNode = (YamlMappingNode)asteroidBeltNode.Value;
+
+            YamlScalarNode asteroidBeltTypeIDNode = (YamlScalarNode)asteroidBeltInfoNode.Children["typeID"];
+            int asteroidBeltTypeID = int.Parse(asteroidBeltTypeIDNode.Value);
+
+            AsteroidBelt asteroidBelt = new AsteroidBelt()
+            {
+                Id = asteroidBeltID,
+                TypeId = asteroidBeltTypeID
+            };
+
+            return asteroidBelt;
         }
     }
 }
