@@ -1,7 +1,9 @@
-﻿using System.IO.Compression;
+﻿using System.Diagnostics;
+using System.IO.Compression;
 using YamlDotNet.RepresentationModel;
 using EveDataCollator.Eve;
 using System.Security.Cryptography;
+using System.Timers;
 using Microsoft.Data.Sqlite;
 using System.Transactions;
 using EveDataCollator.EDCEF;
@@ -474,8 +476,12 @@ namespace EveDataCollator
             return asteroidBelt;
         }
 
-        static void ExportUniverseToEfDb(List<Region> regionList) 
+        static void ExportUniverseToEfDb(List<Region> regionList)
         {
+            Stopwatch dbStopwatch = new Stopwatch();
+            
+            dbStopwatch.Start();
+            
             using (var context = new EdcDbContext())
             {
                 context.Database.EnsureCreated();
@@ -542,6 +548,11 @@ namespace EveDataCollator
                 }
 
                 context.SaveChanges();
+                
+                dbStopwatch.Stop();
+                TimeSpan dbExecutionTime = dbStopwatch.Elapsed;
+                
+                Console.WriteLine($"Database operations: {dbExecutionTime.TotalSeconds.ToString("n2")} seconds");
             }
         }
 
