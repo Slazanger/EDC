@@ -1,10 +1,9 @@
 ﻿using System.IO.Compression;
 using YamlDotNet.RepresentationModel;
 using EveDataCollator.Eve;
-using System.Numerics;
-using System.Diagnostics;
-using System;
 using System.Security.Cryptography;
+using Microsoft.Data.Sqlite;
+using System.Transactions;
 
 
 namespace EveDataCollator
@@ -128,6 +127,10 @@ namespace EveDataCollator
 
             //
             Console.WriteLine($"Parsed {regions.Count} regions");
+
+
+            ExportUniverseToDB(dataFolder, regions.Values.ToList());
+
         }
 
 
@@ -470,6 +473,129 @@ namespace EveDataCollator
             };
 
             return asteroidBelt;
+        }
+
+        // export 
+        static void ExportUniverseToDB(string outPutfolder, List<Region> regionList)
+        {
+            string dbPath = $"{outPutfolder}\\Universe.db";
+
+            // create from scratch
+            if (File.Exists(dbPath))
+            {
+                File.Delete(dbPath);
+            }
+
+            using (var dbConnection = new SqliteConnection($"Data Source={dbPath}"))
+            {
+                dbConnection.Open();
+
+                // create the tables
+                using (var command = dbConnection.CreateCommand())
+                {
+                    command.CommandText = @"
+                        CREATE TABLE IF NOT EXISTS Regions (
+                            Id INTEGER PRIMARY KEY,
+                            Name TEXT NOT NULL,
+                            FactionId INTEGER
+                        );
+
+                        CREATE TABLE IF NOT EXISTS Constellations (
+                            Id INTEGER PRIMARY KEY,
+                            RegionId INTEGER NOT NULL,
+                            Name TEXT NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS SolarSystems (
+                            Id INTEGER PRIMARY KEY,
+                            ConstellationId INTEGER NOT NULL,
+                            Name TEXT NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS Planets (
+                            Id INTEGER PRIMARY KEY,
+                            SolarSystemId INTEGER NOT NULL,
+                            Name TEXT NOT NULL
+                        );
+
+                        CREATE TABLE IF NOT EXISTS Moons (
+                            Id INTEGER PRIMARY KEY,
+                            PlanetId INTEGER NOT NULL,
+                            Name TEXT NOT NULL
+                        );
+
+
+                        ";
+                    command.ExecuteNonQuery();
+                }
+
+
+                using (var transaction = dbConnection.BeginTransaction())
+                {
+                    // populate the data
+                    foreach (var region in regionList)
+                    {
+                        // Insert data into the various tables
+                        using (var command = dbConnection.CreateCommand())
+                        {
+                            command.CommandText = @$"
+                            INSERT INTO Regions (Id, Name, FactionId)
+                            VALUES ('{region.Id}', '{region.Name}', '{region.FactionID}')";
+                            command.ExecuteNonQuery();
+                        }
+
+                        foreach (var constellation in region.Constellations)
+                        {
+                            // Insert data into the various tables
+                            using (var command = dbConnection.CreateCommand())
+                            {
+                                command.CommandText = @$"
+                                INSERT INTO Constellations (Id, Name, RegionId)
+                                VALUES ('{constellation.Id}', '{constellation.Name}', '{region.Id}')";
+                                command.ExecuteNonQuery();
+                            }
+
+                            foreach (var system in constellation.SolarSystems)
+                            {
+                                // Insert data into the various tables
+                                using (var command = dbConnection.CreateCommand())
+                                {
+                                    command.CommandText = @$"
+                                    INSERT INTO SolarSystems (Id, Name, ConstellationId)
+                                    VALUES ('{system.Id}', '{system.Name}', '{constellation.Id}')";
+                                    command.ExecuteNonQuery();
+                                }
+
+
+                                foreach (var planet in system.Planets)
+                                {
+                                    // Insert data into the various tables
+                                    using (var command = dbConnection.CreateCommand())
+                                    {
+                                        command.CommandText = @$"
+                                        INSERT INTO Planets (Id, Name, SolarSystemId)
+                                        VALUES ('{planet.Id}', '{planet.Name}', '{system.Id}')";
+                                        command.ExecuteNonQuery();
+                                    }
+
+                                    foreach (var moon in planet.Moons)
+                                    {
+                                        // Insert data into the various tables
+                                        using (var command = dbConnection.CreateCommand())
+                                        {
+                                            command.CommandText = @$"
+                                        INSERT INTO Moons (Id, Name, PlanetId)
+                                        VALUES ('{moon.Id}', '{moon.Name}', '{planet.Id}')";
+                                            command.ExecuteNonQuery();
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    transaction.Commit();
+                }
+            }
         }
     }
 }
