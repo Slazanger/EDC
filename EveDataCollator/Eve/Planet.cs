@@ -11,6 +11,7 @@ namespace EveDataCollator.Eve
         public string Name { get; set; }
         public int Id { get; set; }
         public int TypeId { get; set; }
+        public List<AsteroidBelt> AsteroidBelts { get; set; }
         public List<Moon> Moons { get; set; }
     }
 }

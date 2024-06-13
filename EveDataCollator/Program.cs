@@ -264,6 +264,30 @@ namespace EveDataCollator
         // Parse the system
         static SolarSystem ParseSolarSystemYaml(string yamlFile)
         {
+            // The solarsystem YAML is in the format :
+            // border
+            // center
+            //      - X,Y,Z
+            // corridor
+            // fringe
+            // hub
+            // international
+            // luminosity
+            // max
+            //      - X,Y,Z
+            // min
+            //      - X,Y,Z
+            // planets
+            // radius
+            // regional
+            // security
+            // solarSystemID
+            // solarSystemNameID
+            // star
+            // stargates
+            // sunTypeID
+            // wormholeClassID
+            
             using var sr = new StreamReader(yamlFile);
             var yamlStream = new YamlStream();
             yamlStream.Load(sr);
@@ -284,6 +308,17 @@ namespace EveDataCollator
             YamlMappingNode planetRootNote = (YamlMappingNode)root.Children["planets"];
             foreach (var pn in planetRootNote.Children)
             {
+                // Planets are part of the solarsystem YAML and the format is:
+                // asteroidBelts
+                // celestialIndex
+                // planetAttributes
+                // moons
+                // position
+                //      - X,Y,Z
+                // radius
+                // statistics
+                // typeID
+                
                 int planetID = int.Parse((string)pn.Key);
 
                 YamlMappingNode planetInfoNode = (YamlMappingNode)pn.Value;
@@ -299,6 +334,34 @@ namespace EveDataCollator
                     Moons = new List<Moon>()
                 };
                 s.Planets.Add(p);
+                
+                // parse the asteroidBelts
+                if (planetInfoNode.Children.Keys.Contains("asteroidBelts"))
+                {
+                    YamlMappingNode asteroidBeltsRootNode = (YamlMappingNode)planetInfoNode.Children["asteroidBelts"];
+                    foreach (var ab in asteroidBeltsRootNode)
+                    {
+                        // AsteroidBelts are part of the solarsystem/planets YAML and the format is:
+                        // position
+                        //      - X,Y,Z
+                        // statistics
+                        // typeID
+
+                        int asteroidBeltID = int.Parse((string)ab.Key);
+                        YamlMappingNode asteroidBeltInfoNode = (YamlMappingNode)ab.Value;
+
+                        YamlScalarNode asteroidBeltTypeIDNode = (YamlScalarNode)asteroidBeltInfoNode.Children["typeID"];
+                        int asteroidBeltTypeID = int.Parse(asteroidBeltTypeIDNode.Value);
+
+                        AsteroidBelt asteroidBelt = new AsteroidBelt()
+                        {
+                            Id = asteroidBeltID,
+                            TypeId = asteroidBeltTypeID
+                        };
+                        
+                        p.AsteroidBelts.Add(asteroidBelt);
+                    }
+                }
 
                 // parse the moons
                 if(planetInfoNode.Children.Keys.Contains("moons"))
@@ -306,6 +369,14 @@ namespace EveDataCollator
                     YamlMappingNode moonsRootNode = (YamlMappingNode)planetInfoNode.Children["moons"];
                     foreach (var mn in moonsRootNode)
                     {
+                        // Moons are part of the solarsystem/planets YAML and the format is:
+                        // planetAttributes
+                        // position
+                        //      - X,Y,Z
+                        // radius
+                        // statistics
+                        // typeID
+                        
                         int moonID = int.Parse((string)mn.Key);
                         YamlMappingNode moonInfoNode = (YamlMappingNode)pn.Value;
 
