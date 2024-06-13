@@ -4,6 +4,7 @@ using EveDataCollator.Eve;
 using System.Numerics;
 using System.Diagnostics;
 using System;
+using System.Security.Cryptography;
 
 
 namespace EveDataCollator
@@ -18,17 +19,29 @@ namespace EveDataCollator
         {
             string checksumUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/checksum";
             string SDEUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/sde.zip";
+            string localCheckSumFile = $"{System.AppContext.BaseDirectory}previous-checksum"; 
+            
+            string serverSDECheckSum = await GetSdeCheckSumFromServer(checksumUrl);
+            string localSDECheckSum = "";
+            
+            string tempFolder = $"{System.AppContext.BaseDirectory}temp";
+            string dataFolder = tempFolder;
 
-
-            // check the current SDE
-            string currentSDEChecksum = await GetCurrentSDECheckSum(checksumUrl);
-
-
-            // check if we already have this
-            string dataFolder = $"{System.AppContext.BaseDirectory}{currentSDEChecksum}";
+            if (File.Exists(localCheckSumFile))
+            {
+                localSDECheckSum = File.ReadAllText(localCheckSumFile);
+                dataFolder = $"{System.AppContext.BaseDirectory}{localSDECheckSum}";
+            }
+            
             string SDELocal = $"{dataFolder}\\sde.zip";
             bool downloadSDE = false;
 
+            if (localSDECheckSum != serverSDECheckSum)
+            {
+                downloadSDE = true;
+            }
+
+            // If either the data folder or the sde zip are missing, download it
             if (!Directory.Exists(dataFolder))
             {
                 downloadSDE = true;
@@ -41,15 +54,66 @@ namespace EveDataCollator
                     downloadSDE = true;
                 }
             }
-
-            // if we dont have the local file, download it
+            
             if(downloadSDE)
             {
+                // Clear out any temp folder
+                if (Directory.Exists(tempFolder))
+                {
+                    Directory.Delete(tempFolder, true);
+                }
+                Directory.CreateDirectory(tempFolder);
+                
                 // download latest SDE
                 await DownloadSDE(SDEUrl, SDELocal);
 
-                // extract SDE zip
-                ZipFile.ExtractToDirectory(SDELocal, dataFolder, true);
+                // extract SDE zip while hashing the content
+                using (ZipArchive sdeZipArchive = ZipFile.OpenRead(SDELocal))
+                {
+                    using (var md5 = MD5.Create())
+                    {
+                        // CCP uses a combined hash of every file in the zip as the checksum
+                        foreach (ZipArchiveEntry entry in sdeZipArchive.Entries)
+                        {
+                            string destinationPath = Path.GetFullPath(Path.Combine(tempFolder, entry.FullName));
+                            string destinationDirectory = Path.GetDirectoryName(destinationPath);
+                            if (!Directory.Exists(destinationDirectory))
+                            {
+                                Directory.CreateDirectory(destinationDirectory);
+                            }
+                            entry.ExtractToFile(destinationPath, true);
+
+                            // add the file to the hash
+                            using (var stream = File.OpenRead(destinationPath))
+                            {
+                                byte[] buffer = new byte[4096];
+                                int bytesRead;
+                                while ((bytesRead = stream.Read(buffer, 0, buffer.Length)) > 0)
+                                {
+                                    md5.TransformBlock(buffer, 0, bytesRead, buffer, 0);
+                                }
+                            }
+                        }
+
+                        // finalize the hash and write it to file
+                        md5.TransformFinalBlock(new byte[0], 0, 0);
+                        string hashString = BitConverter.ToString(md5.Hash).Replace("-", "").ToLowerInvariant();
+                        File.WriteAllText(localCheckSumFile, hashString);
+                        
+                        // set the correct folder
+                        dataFolder = $"{System.AppContext.BaseDirectory}{hashString}";
+                    }
+                }
+                
+                // if we downloaded data but there is a corresponding folder, delete it
+                if (Directory.Exists(dataFolder))
+                {
+                    Directory.Delete(dataFolder, true);
+                }
+                
+                // then move the new data to the data folder
+                Directory.Move(tempFolder, dataFolder);
+                
             }
             else
             {
@@ -58,9 +122,7 @@ namespace EveDataCollator
 
             // load the string database
             LoadNameDictionary(dataFolder);
-
-
-
+            
             // collate all the universe files
             ParseUniverse(dataFolder);
 
@@ -70,7 +132,7 @@ namespace EveDataCollator
 
 
         // get the current SDE Checksum from the 
-        static async Task<string> GetCurrentSDECheckSum(string checksumUrl)
+        static async Task<string> GetSdeCheckSumFromServer(string checksumUrl)
         {
             // the checksum file contains a list of the contents
             // however the sde.zip is not the MD5 hash of the sde file
