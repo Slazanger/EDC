@@ -331,6 +331,7 @@ namespace EveDataCollator
                     Id = planetID,
                     Name = nameIDDictionary[planetID],
                     TypeId = planetTypeID,
+                    AsteroidBelts = new List<AsteroidBelt>(),
                     Moons = new List<Moon>()
                 };
                 s.Planets.Add(p);
