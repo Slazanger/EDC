@@ -8,8 +8,8 @@ namespace EveDataCollator.Eve
 {
     public class Region
     {
-        public string Name { get; set; } = String.Empty;
         public int Id { get; set; }
+        public string Name { get; set; } = String.Empty;
         public int FactionID { get; set; }
 
         public List<Constellation> Constellations { get; set; } = new();

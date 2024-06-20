@@ -5,6 +5,7 @@ using System.Security.Cryptography;
 using Microsoft.Data.Sqlite;
 using System.Transactions;
 using EveDataCollator.EDCEF;
+using System.Diagnostics;
 
 namespace EveDataCollator
 {
@@ -12,6 +13,8 @@ namespace EveDataCollator
     {
         static private Dictionary<int, string> nameIDDictionary = default;
         static private Dictionary<int, Region> regions = default;
+        static private Dictionary<int, Planet> planets = default;
+        static private Dictionary<int, Star> stars = default;
 
         static async Task Main(string[] args)
         {
@@ -124,7 +127,10 @@ namespace EveDataCollator
             // collate all the universe files
             ParseUniverse(dataFolder);
 
-            //
+            
+            ParsePlanetResources(dataFolder);
+
+
             Console.WriteLine($"Parsed {regions.Count} regions");
 
 
@@ -210,15 +216,71 @@ namespace EveDataCollator
         }
 
 
+        // parse the planet resources
+        static void ParsePlanetResources(string rootFolder)
+        {
+            nameIDDictionary = new Dictionary<int, string>();
+
+            string planetResourceFile = $"{rootFolder}\\fsd\\planetResources.yaml";
+
+            using var sr = new StreamReader(planetResourceFile);
+            var yamlStream = new YamlStream();
+            yamlStream.Load(sr);
+
+            var root = (YamlMappingNode)yamlStream.Documents[0].RootNode;
+
+
+            foreach (var e in root.Children)
+            {
+                YamlScalarNode idNode = (YamlScalarNode)e.Key;
+                int planetID = int.Parse(idNode.Value);
+
+                YamlMappingNode planetNode = (YamlMappingNode)e.Value;
+
+                int power = 0;
+                if(planetNode.Children.ContainsKey("power"))
+                {
+                    YamlScalarNode powerNode = (YamlScalarNode)planetNode["power"];
+                    power = int.Parse(powerNode.Value);
+                }
+
+                int workforce = 0;
+                if (planetNode.Children.ContainsKey("workforce"))
+                {
+                    YamlScalarNode workforceNode = (YamlScalarNode)planetNode["workforce"];
+                    workforce = int.Parse(workforceNode.Value);
+                }
+
+                // is it a planet ?
+                if(planets.ContainsKey(planetID))
+                {
+                    planets[planetID].Workforce = workforce;
+                }
+
+                // is it a star ?
+                if(stars.ContainsKey(planetID))
+                {
+                    stars[planetID].Power = power;
+                }
+            }
+        }
+
+
         // Parse Universe files
         static void ParseUniverse(string rootFolder)
         {
             regions = new Dictionary<int, Region>();
+            planets = new Dictionary<int, Planet>();
+            stars = new Dictionary<int, Star>();
+
+
 
             // universe is in .\universe\eve\<region>\<constellation>\<system>
+            string universeRoot = rootFolder + @"\universe\eve";
+
 
             // regions
-            var matchingRegionFiles = Directory.EnumerateFiles(rootFolder, "region.yaml", SearchOption.AllDirectories);
+            var matchingRegionFiles = Directory.EnumerateFiles(universeRoot, "region.yaml", SearchOption.AllDirectories);
             foreach (string regionFile in matchingRegionFiles)
             {
                 Region r = ParseRegionYaml(regionFile);
@@ -361,12 +423,17 @@ namespace EveDataCollator
             YamlScalarNode solarSystemIDNode = (YamlScalarNode)root.Children["solarSystemID"];
             int solarSystemID = int.Parse(solarSystemIDNode.Value);
 
-            SolarSystem s = new SolarSystem()
+            SolarSystem solarSystem = new SolarSystem()
             {
                 Id = solarSystemID,
                 Name = nameIDDictionary[solarSystemID],
                 Planets = new List<Planet>()
             };
+
+            // Parse the star
+            YamlMappingNode starRootNode = (YamlMappingNode)root.Children["star"];
+            solarSystem.Sun = ParseStarYaml(starRootNode);
+
 
             // parse the planets
             YamlMappingNode planetRootNote = (YamlMappingNode)root.Children["planets"];
@@ -398,7 +465,9 @@ namespace EveDataCollator
                     AsteroidBelts = new List<AsteroidBelt>(),
                     Moons = new List<Moon>()
                 };
-                s.Planets.Add(p);
+                solarSystem.Planets.Add(p);
+
+                planets[planetID] = p;
                 
                 // parse the asteroidBelts
                 if (planetInfoNode.Children.Keys.Contains("asteroidBelts"))
@@ -420,8 +489,34 @@ namespace EveDataCollator
                     }
                 }
             }
-            return s;
+            return solarSystem;
         }
+
+        // parse a moon
+        static Star ParseStarYaml(YamlMappingNode starNode)
+        {
+            // Stars are part of the solarsystem YAML and the format is:
+            // radius
+            // statistics
+            // typeID
+
+            YamlScalarNode starIDNode = (YamlScalarNode)starNode.Children["id"];
+            int starID = int.Parse(starIDNode.Value);
+
+            YamlScalarNode starTypeIDNode = (YamlScalarNode)starNode.Children["typeID"];
+            int starTypeID = int.Parse(starTypeIDNode.Value);
+
+            Star star = new Star()
+            {
+                Id = starID,
+                TypeId = starTypeID
+            };
+
+            stars[starID] = star;
+
+            return star;
+        }
+
 
         // parse a moon
         static Moon ParseMoonYaml(KeyValuePair<YamlNode, YamlNode> moonNode)
@@ -479,6 +574,7 @@ namespace EveDataCollator
             using (var context = new EdcDbContext())
             {
                 context.Database.EnsureCreated();
+                context.Database.BeginTransaction();
                 
                 foreach (var region in regionList)
                 {
@@ -514,6 +610,15 @@ namespace EveDataCollator
                                 context.SolarSystems.Add(system);   
                             }
 
+                            if (context.Stars.Any(s => s.Id == system.Sun.Id))
+                            {
+                                context.Stars.Update(system.Sun);
+                            }
+                            else
+                            {
+                                context.Stars.Add(system.Sun);
+                            }
+
                             foreach (var planet in system.Planets)
                             {
                                 if (context.Planets.Any(p => p.Id == planet.Id))
@@ -540,7 +645,7 @@ namespace EveDataCollator
                         }
                     }
                 }
-
+                context.Database.CommitTransaction();
                 context.SaveChanges();
             }
         }
