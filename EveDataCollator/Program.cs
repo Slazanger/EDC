@@ -15,6 +15,7 @@ namespace EveDataCollator
         static private Dictionary<int, Region> regions = default;
         static private Dictionary<int, Planet> planets = default;
         static private Dictionary<int, Star> stars = default;
+        static private Dictionary<int, SolarSystem> systems = default;
 
         static async Task Main(string[] args)
         {
@@ -127,7 +128,12 @@ namespace EveDataCollator
             // collate all the universe files
             ParseUniverse(dataFolder);
 
-            
+
+            // get all of the NPC stations
+            ParseNPCStations(dataFolder);
+
+
+            // extract the planet/star power/workforce data
             ParsePlanetResources(dataFolder);
 
 
@@ -266,12 +272,55 @@ namespace EveDataCollator
         }
 
 
+        // parse the planet resources
+        static void ParseNPCStations(string rootFolder)
+        {
+            nameIDDictionary = new Dictionary<int, string>();
+
+            string stationResourceFile = $"{rootFolder}\\bsd\\staStations.yaml";
+
+            using var sr = new StreamReader(stationResourceFile);
+            var yamlStream = new YamlStream();
+            yamlStream.Load(sr);
+
+            var root = (YamlSequenceNode)yamlStream.Documents[0].RootNode;
+
+            foreach (var e in root.Children)
+            {
+                YamlScalarNode stationIDNode = (YamlScalarNode)e["stationID"];
+                int stationID = int.Parse(stationIDNode.Value);
+
+                YamlScalarNode solarSystemIDNode = (YamlScalarNode)e["solarSystemID"];
+                int solarSystemID = int.Parse(solarSystemIDNode.Value);
+
+
+                YamlScalarNode stationNameNode = (YamlScalarNode)e["stationName"];
+                string stationName = stationNameNode.Value;
+
+                Station station = new Station()
+                {
+                    Id = stationID,
+                    Name = stationName
+                };
+
+                // the stations list contains all stations yet we're currently only parsing K-Space and
+                // Thera (J-space)
+                if(systems.ContainsKey(solarSystemID))
+                {
+                    systems[solarSystemID].Stations.Add(station);
+                }
+
+            }
+        }
+
+
         // Parse Universe files
         static void ParseUniverse(string rootFolder)
         {
             regions = new Dictionary<int, Region>();
             planets = new Dictionary<int, Planet>();
             stars = new Dictionary<int, Star>();
+            systems = new Dictionary<int, SolarSystem>();
 
 
 
@@ -427,8 +476,11 @@ namespace EveDataCollator
             {
                 Id = solarSystemID,
                 Name = nameIDDictionary[solarSystemID],
-                Planets = new List<Planet>()
+                Planets = new List<Planet>(),
+                Stations = new List<Station>()
             };
+
+            systems[solarSystemID] = solarSystem;
 
             // Parse the star
             YamlMappingNode starRootNode = (YamlMappingNode)root.Children["star"];
@@ -641,6 +693,18 @@ namespace EveDataCollator
                                         context.Moons.Add(moon);   
                                     }
                                 }
+                            }
+
+                            foreach (var station in system.Stations)
+                            {
+                                if (context.Stations.Any(p => p.Id == station.Id))
+                                {
+                                    context.Stations.Update(station);
+                                }
+                                else
+                                {
+                                    context.Stations.Add(station);
+                                } 
                             }
                         }
                     }

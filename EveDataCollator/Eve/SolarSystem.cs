@@ -12,5 +12,6 @@ namespace EveDataCollator.Eve
         public string Name { get; set; } = String.Empty;
         public Star Sun { get; set; } = new ();
         public List<Planet> Planets { get; set; } = new();
+        public List<Station> Stations { get; set; } = new();
     }
 }
