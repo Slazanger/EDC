@@ -1,7 +1,9 @@
-﻿using System.IO.Compression;
+﻿using System.Diagnostics;
+using System.IO.Compression;
 using YamlDotNet.RepresentationModel;
 using EveDataCollator.Eve;
 using System.Security.Cryptography;
+using System.Timers;
 using Microsoft.Data.Sqlite;
 using System.Transactions;
 using EveDataCollator.EDCEF;
@@ -484,7 +486,7 @@ namespace EveDataCollator
 
             // Parse the star
             YamlMappingNode starRootNode = (YamlMappingNode)root.Children["star"];
-            solarSystem.Sun = ParseStarYaml(starRootNode);
+            solarSystem.Star = ParseStarYaml(starRootNode);
 
 
             // parse the planets
@@ -621,8 +623,12 @@ namespace EveDataCollator
             return asteroidBelt;
         }
 
-        static void ExportUniverseToEfDb(List<Region> regionList) 
+        static void ExportUniverseToEfDb(List<Region> regionList)
         {
+            Stopwatch dbStopwatch = new Stopwatch();
+            
+            dbStopwatch.Start();
+            
             using (var context = new EdcDbContext())
             {
                 context.Database.EnsureCreated();
@@ -662,13 +668,13 @@ namespace EveDataCollator
                                 context.SolarSystems.Add(system);   
                             }
 
-                            if (context.Stars.Any(s => s.Id == system.Sun.Id))
+                            if (context.Stars.Any(s => s.Id == system.Star.Id))
                             {
-                                context.Stars.Update(system.Sun);
+                                context.Stars.Update(system.Star);
                             }
                             else
                             {
-                                context.Stars.Add(system.Sun);
+                                context.Stars.Add(system.Star);
                             }
 
                             foreach (var planet in system.Planets)
@@ -711,12 +717,18 @@ namespace EveDataCollator
                 }
                 context.Database.CommitTransaction();
                 context.SaveChanges();
+                
+                dbStopwatch.Stop();
+                TimeSpan dbExecutionTime = dbStopwatch.Elapsed;
+                
+                Console.WriteLine($"Database operations: {dbExecutionTime.TotalSeconds.ToString("n2")} seconds");
             }
         }
 
         // export 
         static void ExportUniverseToDB(string outPutfolder, List<Region> regionList)
         {
+            /*
             string dbPath = $"{outPutfolder}\\Universe.db";
 
             // create from scratch
@@ -835,6 +847,7 @@ namespace EveDataCollator
                     transaction.Commit();
                 }
             }
+            */
         }
     }
 }

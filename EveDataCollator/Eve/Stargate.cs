@@ -2,16 +2,16 @@
 
 namespace EveDataCollator.Eve
 {
-    public class AsteroidBelt
+    public class Stargate
     {
+        // id
+        // destination
         // position
-        //      - X,Y,Z
-        // statistics
-        // typeID
+        // - X, Y, Z
         
         public int Id { get; set; }
+        public int Destination { get; set; }
         public DecVector3 Position { get; set; }
-        public Statistics Statistics { get; set; } = new();
         public int TypeId { get; set; }
     }
 }

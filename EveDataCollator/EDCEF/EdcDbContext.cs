@@ -22,4 +22,27 @@ public class EdcDbContext : DbContext
         string DbPath = $"{System.AppContext.BaseDirectory}edcDb.sqlite";
         optionsBuilder.UseSqlite($"Data Source={DbPath}");
     }
+
+    protected override void OnModelCreating(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Region>().Property(r => r.Center).HasConversion(new DecVector3Converter());
+        modelBuilder.Entity<Region>().Property(r => r.Min).HasConversion(new DecVector3Converter());
+        modelBuilder.Entity<Region>().Property(r => r.Max).HasConversion(new DecVector3Converter());
+        
+        modelBuilder.Entity<Constellation>().Property(c => c.Center).HasConversion(new DecVector3Converter());
+        modelBuilder.Entity<Constellation>().Property(c => c.Min).HasConversion(new DecVector3Converter());
+        modelBuilder.Entity<Constellation>().Property(c => c.Max).HasConversion(new DecVector3Converter());
+        
+        modelBuilder.Entity<AsteroidBelt>().Property(a => a.Position).HasConversion(new DecVector3Converter());
+        
+        modelBuilder.Entity<Moon>().Property(m => m.Position).HasConversion(new DecVector3Converter());
+        
+        modelBuilder.Entity<Planet>().Property(p => p.Position).HasConversion(new DecVector3Converter());
+        
+        modelBuilder.Entity<SolarSystem>().Property(s => s.Center).HasConversion(new DecVector3Converter());
+        modelBuilder.Entity<SolarSystem>().Property(s => s.Min).HasConversion(new DecVector3Converter());
+        modelBuilder.Entity<SolarSystem>().Property(s => s.Max).HasConversion(new DecVector3Converter());
+        
+        modelBuilder.Entity<Stargate>().Property(s => s.Position).HasConversion(new DecVector3Converter());
+    }
 }
