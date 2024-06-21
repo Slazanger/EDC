@@ -10,8 +10,11 @@ public class EdcDbContext : DbContext
     public DbSet<Moon> Moons { get; set; }
     public DbSet<Planet> Planets { get; set; }
     public DbSet<Region> Regions { get; set; }
+    public DbSet<Star> Stars { get; set; }
     public DbSet<SolarSystem> SolarSystems { get; set; }
-    
+    public DbSet<Station> Stations { get; set; }
+
+
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         base.OnConfiguring(optionsBuilder);

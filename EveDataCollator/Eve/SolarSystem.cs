@@ -8,9 +8,10 @@ namespace EveDataCollator.Eve
 {
     public class SolarSystem
     {
+        public int Id { get; set; }
         public string Name { get; set; } = String.Empty;
-        public int  Id { get; set; }
-
+        public Star Sun { get; set; } = new ();
         public List<Planet> Planets { get; set; } = new();
+        public List<Station> Stations { get; set; } = new();
     }
 }
