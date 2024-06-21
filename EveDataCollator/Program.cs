@@ -486,7 +486,7 @@ namespace EveDataCollator
 
             // Parse the star
             YamlMappingNode starRootNode = (YamlMappingNode)root.Children["star"];
-            solarSystem.Sun = ParseStarYaml(starRootNode);
+            solarSystem.Star = ParseStarYaml(starRootNode);
 
 
             // parse the planets
@@ -668,13 +668,13 @@ namespace EveDataCollator
                                 context.SolarSystems.Add(system);   
                             }
 
-                            if (context.Stars.Any(s => s.Id == system.Sun.Id))
+                            if (context.Stars.Any(s => s.Id == system.Star.Id))
                             {
-                                context.Stars.Update(system.Sun);
+                                context.Stars.Update(system.Star);
                             }
                             else
                             {
-                                context.Stars.Add(system.Sun);
+                                context.Stars.Add(system.Star);
                             }
 
                             foreach (var planet in system.Planets)
@@ -728,6 +728,7 @@ namespace EveDataCollator
         // export 
         static void ExportUniverseToDB(string outPutfolder, List<Region> regionList)
         {
+            /*
             string dbPath = $"{outPutfolder}\\Universe.db";
 
             // create from scratch
@@ -846,6 +847,7 @@ namespace EveDataCollator
                     transaction.Commit();
                 }
             }
+            */
         }
     }
 }
