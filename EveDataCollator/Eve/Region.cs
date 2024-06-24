@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Threading.Tasks;
 using EveDataCollator.Data;
@@ -21,7 +22,8 @@ namespace EveDataCollator.Eve
         // regionID
         // wormholeClassID
         
-        public int Id { get; set; }  // Todo: Decide if we keep Id or use RegionId.
+        public int Id { get; set; } 
+        [StringLength(128)]
         public string Name { get; set; } = String.Empty; // Obsolete, handled by NameId.
         public DecVector3 Center { get; set; }
         public int DescriptionId { get; set; }
@@ -30,7 +32,6 @@ namespace EveDataCollator.Eve
         public DecVector3 Min { get; set; }
         public int NameId { get; set; }
         public int Nebula { get; set; }
-        public int RegionId { get; set; }
         public int WormholeClassId { get; set; }
         
         public List<Constellation> Constellations { get; set; } = new();

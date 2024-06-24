@@ -8,6 +8,9 @@ using Microsoft.Data.Sqlite;
 using System.Transactions;
 using EveDataCollator.EDCEF;
 using System.Diagnostics;
+using System.Globalization;
+using EveDataCollator.Data;
+using Microsoft.EntityFrameworkCore.Storage;
 
 namespace EveDataCollator
 {
@@ -348,8 +351,7 @@ namespace EveDataCollator
                 {
                     Constellation c = ParseConstellationYaml(constellationFile);
                     r.Constellations.Add(c);
-
-
+                    
                     // get the systems within this folder
                     string constellationDir = Path.GetDirectoryName(constellationFile);
 
@@ -389,14 +391,21 @@ namespace EveDataCollator
 
             var root = (YamlMappingNode)yamlStream.Documents[0].RootNode;
 
+            DecVector3 center = ((YamlSequenceNode)root.Children["center"]).ToDecVector3();
+            DecVector3 max = ((YamlSequenceNode)root.Children["max"]).ToDecVector3();
+            DecVector3 min = ((YamlSequenceNode)root.Children["min"]).ToDecVector3();
+            
             YamlScalarNode regionIDNode = (YamlScalarNode)root.Children["regionID"];
             int regionID = int.Parse(regionIDNode.Value);
 
             Region r = new Region()
             {
                 Name = nameIDDictionary[regionID],
+                //Center = center,
                 Id = regionID,
                 Constellations = new List<Constellation>(),
+                //Max = max,
+                //Min = min
             };
 
             return r;
@@ -426,12 +435,19 @@ namespace EveDataCollator
 
             YamlScalarNode constellationIDNode = (YamlScalarNode)root.Children["constellationID"];
             int constellationID = int.Parse(constellationIDNode.Value);
+            
+            DecVector3 center = ((YamlSequenceNode)root.Children["center"]).ToDecVector3();
+            DecVector3 max = ((YamlSequenceNode)root.Children["max"]).ToDecVector3();
+            DecVector3 min = ((YamlSequenceNode)root.Children["min"]).ToDecVector3();
 
             Constellation c = new Constellation()
             {
                 Id = constellationID,
                 Name = nameIDDictionary[constellationID],
-                SolarSystems = new List<SolarSystem>()
+                SolarSystems = new List<SolarSystem>(),
+                //Center = center,
+                //Max = max,
+                //Min = min
             };
 
             return c;
@@ -473,11 +489,18 @@ namespace EveDataCollator
 
             YamlScalarNode solarSystemIDNode = (YamlScalarNode)root.Children["solarSystemID"];
             int solarSystemID = int.Parse(solarSystemIDNode.Value);
+            
+            DecVector3 center = ((YamlSequenceNode)root.Children["center"]).ToDecVector3();
+            DecVector3 max = ((YamlSequenceNode)root.Children["max"]).ToDecVector3();
+            DecVector3 min = ((YamlSequenceNode)root.Children["min"]).ToDecVector3();
 
             SolarSystem solarSystem = new SolarSystem()
             {
                 Id = solarSystemID,
                 Name = nameIDDictionary[solarSystemID],
+                Center = center,
+                Max = max,
+                Min = min,
                 Planets = new List<Planet>(),
                 Stations = new List<Station>()
             };
@@ -493,60 +516,74 @@ namespace EveDataCollator
             YamlMappingNode planetRootNote = (YamlMappingNode)root.Children["planets"];
             foreach (var pn in planetRootNote.Children)
             {
-                // Planets are part of the solarsystem YAML and the format is:
-                // asteroidBelts
-                // celestialIndex
-                // planetAttributes
-                // moons
-                // position
-                //      - X,Y,Z
-                // radius
-                // statistics
-                // typeID
-                
-                int planetID = int.Parse((string)pn.Key);
-
-                YamlMappingNode planetInfoNode = (YamlMappingNode)pn.Value;
-
-                YamlScalarNode typeIDNode = (YamlScalarNode)planetInfoNode.Children["typeID"];
-                int planetTypeID = int.Parse(typeIDNode.Value);
-
-                Planet p = new Planet()
-                {
-                    Id = planetID,
-                    Name = nameIDDictionary[planetID],
-                    TypeId = planetTypeID,
-                    AsteroidBelts = new List<AsteroidBelt>(),
-                    Moons = new List<Moon>()
-                };
-                solarSystem.Planets.Add(p);
-
-                planets[planetID] = p;
-                
-                // parse the asteroidBelts
-                if (planetInfoNode.Children.Keys.Contains("asteroidBelts"))
-                {
-                    YamlMappingNode asteroidBeltsRootNode = (YamlMappingNode)planetInfoNode.Children["asteroidBelts"];
-                    foreach (var ab in asteroidBeltsRootNode)
-                    {
-                        p.AsteroidBelts.Add(ParseAsteroidBeltYaml(ab));
-                    }
-                }
-
-                // parse the moons
-                if(planetInfoNode.Children.Keys.Contains("moons"))
-                {
-                    YamlMappingNode moonsRootNode = (YamlMappingNode)planetInfoNode.Children["moons"];
-                    foreach (var mn in moonsRootNode)
-                    {
-                        p.Moons.Add(ParseMoonYaml(mn));
-                    }
-                }
+                solarSystem.Planets.Add(ParsePlanetYaml(pn));
             }
             return solarSystem;
         }
 
-        // parse a moon
+        static Planet ParsePlanetYaml(KeyValuePair<YamlNode, YamlNode> planetNode)
+        {
+            // Planets are part of the solarsystem YAML and the format is:
+            // asteroidBelts
+            // celestialIndex
+            // planetAttributes
+            // moons
+            // position
+            //      - X,Y,Z
+            // radius
+            // statistics
+            // typeID
+                
+            int planetID = int.Parse((string)planetNode.Key);
+
+            YamlMappingNode planetInfoNode = (YamlMappingNode)planetNode.Value;
+
+            YamlScalarNode typeIDNode = (YamlScalarNode)planetInfoNode.Children["typeID"];
+            int typeID = int.Parse(typeIDNode.Value);
+
+            int celestialIndex = int.Parse(((YamlScalarNode)planetInfoNode.Children["celestialIndex"]).Value);
+            DecVector3 position = ((YamlSequenceNode)planetInfoNode.Children["position"]).ToDecVector3();
+            decimal radius = decimal.Parse(((YamlScalarNode)planetInfoNode.Children["celestialIndex"]).Value, NumberStyles.Float, CultureInfo.InvariantCulture);
+
+            Planet planet = new Planet()
+            {
+                Id = planetID,
+                Name = nameIDDictionary[planetID],
+                AsteroidBelts = new List<AsteroidBelt>(),
+                CelestialIndex = celestialIndex,
+                PlanetAttributes = new PlanetAttributes(),
+                Moons = new List<Moon>(),
+                Position = position,
+                Radius = radius,
+                Statistics = new Statistics(),
+                TypeId = typeID
+            };
+            
+            planets[planetID] = planet;
+                
+            // parse the asteroidBelts
+            if (planetInfoNode.Children.Keys.Contains("asteroidBelts"))
+            {
+                YamlMappingNode asteroidBeltsRootNode = (YamlMappingNode)planetInfoNode.Children["asteroidBelts"];
+                foreach (var ab in asteroidBeltsRootNode)
+                {
+                    planet.AsteroidBelts.Add(ParseAsteroidBeltYaml(ab));
+                }
+            }
+
+            // parse the moons
+            if(planetInfoNode.Children.Keys.Contains("moons"))
+            {
+                YamlMappingNode moonsRootNode = (YamlMappingNode)planetInfoNode.Children["moons"];
+                foreach (var mn in moonsRootNode)
+                {
+                    planet.Moons.Add(ParseMoonYaml(mn));
+                }
+            }
+            return planet;
+        }
+
+        // parse a star
         static Star ParseStarYaml(YamlMappingNode starNode)
         {
             // Stars are part of the solarsystem YAML and the format is:
@@ -588,11 +625,14 @@ namespace EveDataCollator
 
             YamlScalarNode moonTypeIDNode = (YamlScalarNode)moonInfoNode.Children["typeID"];
             int moonTypeID = int.Parse(moonTypeIDNode.Value);
+            
+            DecVector3 position = ((YamlSequenceNode)moonInfoNode.Children["position"]).ToDecVector3();
 
             Moon moon = new Moon()
             {
                 Id = moonID,
                 Name = nameIDDictionary[moonID],
+                PlanetAttributes = new PlanetAttributes(),
                 TypeId = moonTypeID
             };
 
@@ -613,6 +653,8 @@ namespace EveDataCollator
 
             YamlScalarNode asteroidBeltTypeIDNode = (YamlScalarNode)asteroidBeltInfoNode.Children["typeID"];
             int asteroidBeltTypeID = int.Parse(asteroidBeltTypeIDNode.Value);
+            
+            DecVector3 position = ((YamlSequenceNode)asteroidBeltInfoNode.Children["position"]).ToDecVector3();
 
             AsteroidBelt asteroidBelt = new AsteroidBelt()
             {
@@ -623,59 +665,83 @@ namespace EveDataCollator
             return asteroidBelt;
         }
 
+        static void IncrementBatchSize(ref IDbContextTransaction transaction, EdcDbContext edcDbContext, ref int counter, ref int overallCounter, int batchSize)
+        {
+            if (counter >= batchSize)
+            {
+                Console.WriteLine($"Comitting batch to db.");
+                edcDbContext.SaveChanges();
+                transaction.Commit();
+                transaction = edcDbContext.Database.BeginTransaction();
+                counter = 0;
+            }
+            else
+            {
+                overallCounter++;
+                Console.Write($"\rTransaction count: {overallCounter} ");
+                counter++;
+            }
+        }
+        
         static void ExportUniverseToEfDb(List<Region> regionList)
         {
             Stopwatch dbStopwatch = new Stopwatch();
+            int batchSize = 10000;
+            int counter = 0;
+            int overallCounter = 0;
             
             dbStopwatch.Start();
             
             using (var context = new EdcDbContext())
             {
                 context.Database.EnsureCreated();
-                context.Database.BeginTransaction();
+                var transaction = context.Database.BeginTransaction();
                 
                 foreach (var region in regionList)
                 {
                     if (context.Regions.Any(r => r.Id == region.Id))
                     {
-                        context.Regions.Update(region);
+                        context.Regions.Add(region);    
                     }
                     else
                     {
                         context.Regions.Add(region);   
                     }
+                    IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
 
                     foreach (var constellation in region.Constellations)
                     {
-                        
                         if (context.Constellations.Any(c => c.Id == constellation.Id))
                         {
-                            context.Constellations.Update(constellation);
+                            context.Constellations.Update(constellation);   
                         }
                         else
                         {
-                            context.Constellations.Add(constellation);   
+                            context.Constellations.Add(constellation);
                         }
-
+                        IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
+                        
                         foreach (var system in constellation.SolarSystems)
                         {
                             if (context.SolarSystems.Any(s => s.Id == system.Id))
                             {
-                                context.SolarSystems.Update(system);
+                                context.SolarSystems.Update(system);   
                             }
                             else
                             {
-                                context.SolarSystems.Add(system);   
+                                context.SolarSystems.Add(system);
                             }
+                            IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
 
                             if (context.Stars.Any(s => s.Id == system.Star.Id))
                             {
-                                context.Stars.Update(system.Star);
+                                context.Stars.Update(system.Star);   
                             }
                             else
                             {
                                 context.Stars.Add(system.Star);
                             }
+                            IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
 
                             foreach (var planet in system.Planets)
                             {
@@ -685,8 +751,10 @@ namespace EveDataCollator
                                 }
                                 else
                                 {
-                                    context.Planets.Add(planet);   
+                                    context.Planets.Add(planet);    
                                 }
+                                
+                                IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
 
                                 foreach (var moon in planet.Moons)
                                 {
@@ -696,32 +764,37 @@ namespace EveDataCollator
                                     }
                                     else
                                     {
-                                        context.Moons.Add(moon);   
+                                        context.Moons.Add(moon);    
                                     }
+                                    
+                                    IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
                                 }
                             }
 
                             foreach (var station in system.Stations)
                             {
-                                if (context.Stations.Any(p => p.Id == station.Id))
+                                if (context.Stations.Any(s => s.Id == station.Id))
                                 {
-                                    context.Stations.Update(station);
+                                    context.Stations.Update(station);    
                                 }
                                 else
                                 {
-                                    context.Stations.Add(station);
-                                } 
+                                    context.Stations.Add(station);    
+                                }
+                                
+                                IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
                             }
                         }
                     }
                 }
-                context.Database.CommitTransaction();
-                context.SaveChanges();
                 
+                context.SaveChanges();
+                transaction.Commit();
+
                 dbStopwatch.Stop();
                 TimeSpan dbExecutionTime = dbStopwatch.Elapsed;
                 
-                Console.WriteLine($"Database operations: {dbExecutionTime.TotalSeconds.ToString("n2")} seconds");
+                Console.WriteLine($"\nDatabase operations: {dbExecutionTime.TotalSeconds.ToString("n2")} seconds");
             }
         }
 
