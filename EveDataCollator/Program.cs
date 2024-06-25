@@ -326,13 +326,10 @@ namespace EveDataCollator
             planets = new Dictionary<int, Planet>();
             stars = new Dictionary<int, Star>();
             systems = new Dictionary<int, SolarSystem>();
-
-
-
+            
             // universe is in .\universe\eve\<region>\<constellation>\<system>
             string universeRoot = rootFolder + @"\universe\eve";
-
-
+            
             // regions
             var matchingRegionFiles = Directory.EnumerateFiles(universeRoot, "region.yaml", SearchOption.AllDirectories);
             foreach (string regionFile in matchingRegionFiles)
@@ -383,33 +380,38 @@ namespace EveDataCollator
             // nebula
             // regionID
             // wormholeClassID
-
-
+            
             using var sr = new StreamReader(yamlFile);
             var yamlStream = new YamlStream();
             yamlStream.Load(sr);
 
             var root = (YamlMappingNode)yamlStream.Documents[0].RootNode;
 
+            int regionId = YamlParser.ParseYamlValue(root, "regionID", YamlParser.ParseInt);
             DecVector3 center = ((YamlSequenceNode)root.Children["center"]).ToDecVector3();
             DecVector3 max = ((YamlSequenceNode)root.Children["max"]).ToDecVector3();
             DecVector3 min = ((YamlSequenceNode)root.Children["min"]).ToDecVector3();
-            
-            YamlScalarNode regionIDNode = (YamlScalarNode)root.Children["regionID"];
-            int regionID = int.Parse(regionIDNode.Value);
+            int descriptionId = YamlParser.ParseYamlValue(root, "descriptionID", YamlParser.ParseInt);
+            int nameId = YamlParser.ParseYamlValue(root, "nameID", YamlParser.ParseInt);
+            int nebula = YamlParser.ParseYamlValue(root, "nebula", YamlParser.ParseInt);
+            int wormholeClassId = YamlParser.ParseYamlValue(root, "wormholeClassID", YamlParser.ParseInt);
 
             Region r = new Region()
             {
-                Name = nameIDDictionary[regionID],
-                //Center = center,
-                Id = regionID,
-                Constellations = new List<Constellation>(),
-                //Max = max,
-                //Min = min
+                Id = regionId,
+                Name = nameIDDictionary[regionId],
+                Center = center,
+                DescriptionId = descriptionId,
+                FactionId = 0, // Todo: Where does this come from?
+                Max = max,
+                Min = min,
+                NameId = nameId,
+                Nebula = nebula,
+                WormholeClassId = wormholeClassId,
+                Constellations = new List<Constellation>()
             };
 
             return r;
-
         }
 
 
@@ -432,22 +434,24 @@ namespace EveDataCollator
             yamlStream.Load(sr);
 
             var root = (YamlMappingNode)yamlStream.Documents[0].RootNode;
-
-            YamlScalarNode constellationIDNode = (YamlScalarNode)root.Children["constellationID"];
-            int constellationID = int.Parse(constellationIDNode.Value);
             
+            int constellationId = YamlParser.ParseYamlValue(root, "constellationID", YamlParser.ParseInt);
+            int nameId = YamlParser.ParseYamlValue(root, "nameID", YamlParser.ParseInt);
+            decimal radius = YamlParser.ParseYamlValue(root, "radius", YamlParser.ParseDecimal);
             DecVector3 center = ((YamlSequenceNode)root.Children["center"]).ToDecVector3();
             DecVector3 max = ((YamlSequenceNode)root.Children["max"]).ToDecVector3();
             DecVector3 min = ((YamlSequenceNode)root.Children["min"]).ToDecVector3();
 
             Constellation c = new Constellation()
             {
-                Id = constellationID,
-                Name = nameIDDictionary[constellationID],
+                Id = constellationId,
+                Name = nameIDDictionary[constellationId],
+                Center = center,
+                Max = max,
+                Min = min,
+                NameId = nameId,
+                Radius = radius,
                 SolarSystems = new List<SolarSystem>(),
-                //Center = center,
-                //Max = max,
-                //Min = min
             };
 
             return c;
@@ -486,26 +490,52 @@ namespace EveDataCollator
             yamlStream.Load(sr);
 
             var root = (YamlMappingNode)yamlStream.Documents[0].RootNode;
-
-            YamlScalarNode solarSystemIDNode = (YamlScalarNode)root.Children["solarSystemID"];
-            int solarSystemID = int.Parse(solarSystemIDNode.Value);
             
+            int solarSystemId = YamlParser.ParseYamlValue(root, "solarSystemID", YamlParser.ParseInt);
             DecVector3 center = ((YamlSequenceNode)root.Children["center"]).ToDecVector3();
             DecVector3 max = ((YamlSequenceNode)root.Children["max"]).ToDecVector3();
             DecVector3 min = ((YamlSequenceNode)root.Children["min"]).ToDecVector3();
+            YamlScalarNode borderNode = (YamlScalarNode)root.Children["border"];
+            bool border = YamlParser.ParseYamlValue(root, "border", YamlParser.ParseBool);
+            bool corridor = YamlParser.ParseYamlValue(root, "corridor", YamlParser.ParseBool);
+            bool fringe = YamlParser.ParseYamlValue(root, "fringe", YamlParser.ParseBool);
+            bool hub = YamlParser.ParseYamlValue(root, "hub", YamlParser.ParseBool);
+            bool international = YamlParser.ParseYamlValue(root, "international", YamlParser.ParseBool);
+            float luminosity = YamlParser.ParseYamlValue(root, "luminosity", YamlParser.ParseFloat);
+            decimal radius = YamlParser.ParseYamlValue(root, "radius", YamlParser.ParseDecimal);
+            bool regional = YamlParser.ParseYamlValue(root, "regional", YamlParser.ParseBool);
+            float security = YamlParser.ParseYamlValue(root, "security", YamlParser.ParseFloat);
+            int solarSystemNameId = YamlParser.ParseYamlValue(root, "solarSystemNameID", YamlParser.ParseInt);
+            int sunTypeId = YamlParser.ParseYamlValue(root, "sunTypeID", YamlParser.ParseInt);
+            int wormholeClassId = YamlParser.ParseYamlValue(root, "wormholeClassID", YamlParser.ParseInt);
 
             SolarSystem solarSystem = new SolarSystem()
             {
-                Id = solarSystemID,
-                Name = nameIDDictionary[solarSystemID],
+                Id = solarSystemId,
+                Name = nameIDDictionary[solarSystemId],
+                Border = border,
                 Center = center,
+                Corridor = corridor,
+                DisallowedAnchorCategories = new (), // Todo: What is this and how do we store it?
+                Fringe = fringe,
+                Hub = hub,
+                International = international,
+                Luminosity = luminosity,
                 Max = max,
                 Min = min,
                 Planets = new List<Planet>(),
-                Stations = new List<Station>()
+                Radius = radius,
+                Regional = regional,
+                Security = security,
+                SolarSystemNameId = solarSystemNameId,
+                //Star is handled below
+                Stargates = new (),
+                Stations = new (),
+                SunTypeId = sunTypeId,
+                WormholeClassId = wormholeClassId
             };
 
-            systems[solarSystemID] = solarSystem;
+            systems[solarSystemId] = solarSystem;
 
             // Parse the star
             YamlMappingNode starRootNode = (YamlMappingNode)root.Children["star"];
@@ -534,21 +564,19 @@ namespace EveDataCollator
             // statistics
             // typeID
                 
-            int planetID = int.Parse((string)planetNode.Key);
+            int planetId = int.Parse((string)planetNode.Key);
 
             YamlMappingNode planetInfoNode = (YamlMappingNode)planetNode.Value;
-
-            YamlScalarNode typeIDNode = (YamlScalarNode)planetInfoNode.Children["typeID"];
-            int typeID = int.Parse(typeIDNode.Value);
-
-            int celestialIndex = int.Parse(((YamlScalarNode)planetInfoNode.Children["celestialIndex"]).Value);
+            
+            int celestialIndex = YamlParser.ParseYamlValue(planetInfoNode, "celestialIndex", YamlParser.ParseInt);
             DecVector3 position = ((YamlSequenceNode)planetInfoNode.Children["position"]).ToDecVector3();
-            decimal radius = decimal.Parse(((YamlScalarNode)planetInfoNode.Children["celestialIndex"]).Value, NumberStyles.Float, CultureInfo.InvariantCulture);
+            decimal radius = YamlParser.ParseYamlValue(planetInfoNode, "radius", YamlParser.ParseDecimal);
+            int typeId = YamlParser.ParseYamlValue(planetInfoNode, "typeID", YamlParser.ParseInt);
 
             Planet planet = new Planet()
             {
-                Id = planetID,
-                Name = nameIDDictionary[planetID],
+                Id = planetId,
+                Name = nameIDDictionary[planetId],
                 AsteroidBelts = new List<AsteroidBelt>(),
                 CelestialIndex = celestialIndex,
                 PlanetAttributes = new PlanetAttributes(),
@@ -556,10 +584,10 @@ namespace EveDataCollator
                 Position = position,
                 Radius = radius,
                 Statistics = new Statistics(),
-                TypeId = typeID
+                TypeId = typeId
             };
             
-            planets[planetID] = planet;
+            planets[planetId] = planet;
                 
             // parse the asteroidBelts
             if (planetInfoNode.Children.Keys.Contains("asteroidBelts"))
@@ -590,20 +618,21 @@ namespace EveDataCollator
             // radius
             // statistics
             // typeID
-
-            YamlScalarNode starIDNode = (YamlScalarNode)starNode.Children["id"];
-            int starID = int.Parse(starIDNode.Value);
-
-            YamlScalarNode starTypeIDNode = (YamlScalarNode)starNode.Children["typeID"];
-            int starTypeID = int.Parse(starTypeIDNode.Value);
+            
+            int starId = YamlParser.ParseYamlValue(starNode, "id", YamlParser.ParseInt);
+            decimal radius = YamlParser.ParseYamlValue(starNode, "radius", YamlParser.ParseDecimal);
+            int typeId = YamlParser.ParseYamlValue(starNode, "typeID", YamlParser.ParseInt);
 
             Star star = new Star()
             {
-                Id = starID,
-                TypeId = starTypeID
+                Id = starId,
+                Radius = radius,
+                Statistics = new (),
+                TypeId = typeId,
+                Power = 0 // Todo: Where does this come from?
             };
 
-            stars[starID] = star;
+            stars[starId] = star;
 
             return star;
         }
@@ -620,20 +649,22 @@ namespace EveDataCollator
             // statistics
             // typeID
                         
-            int moonID = int.Parse((string)moonNode.Key);
+            int moonId = int.Parse((string)moonNode.Key);
             YamlMappingNode moonInfoNode = (YamlMappingNode)moonNode.Value;
 
-            YamlScalarNode moonTypeIDNode = (YamlScalarNode)moonInfoNode.Children["typeID"];
-            int moonTypeID = int.Parse(moonTypeIDNode.Value);
-            
             DecVector3 position = ((YamlSequenceNode)moonInfoNode.Children["position"]).ToDecVector3();
+            decimal radius = YamlParser.ParseYamlValue(moonInfoNode, "radius", YamlParser.ParseDecimal);
+            int typeId = YamlParser.ParseYamlValue(moonInfoNode, "typeID", YamlParser.ParseInt);
 
             Moon moon = new Moon()
             {
-                Id = moonID,
-                Name = nameIDDictionary[moonID],
-                PlanetAttributes = new PlanetAttributes(),
-                TypeId = moonTypeID
+                Id = moonId,
+                Name = nameIDDictionary[moonId],
+                PlanetAttributes = new (),
+                Position = position,
+                Radius = radius,
+                Statistics = new (),
+                TypeId = typeId
             };
 
             return moon;
@@ -648,18 +679,18 @@ namespace EveDataCollator
             // statistics
             // typeID
 
-            int asteroidBeltID = int.Parse((string)asteroidBeltNode.Key);
+            int asteroidBeltId = int.Parse((string)asteroidBeltNode.Key);
             YamlMappingNode asteroidBeltInfoNode = (YamlMappingNode)asteroidBeltNode.Value;
-
-            YamlScalarNode asteroidBeltTypeIDNode = (YamlScalarNode)asteroidBeltInfoNode.Children["typeID"];
-            int asteroidBeltTypeID = int.Parse(asteroidBeltTypeIDNode.Value);
             
             DecVector3 position = ((YamlSequenceNode)asteroidBeltInfoNode.Children["position"]).ToDecVector3();
+            int typeId = YamlParser.ParseYamlValue(asteroidBeltInfoNode, "typeID", YamlParser.ParseInt);
 
             AsteroidBelt asteroidBelt = new AsteroidBelt()
             {
-                Id = asteroidBeltID,
-                TypeId = asteroidBeltTypeID
+                Id = asteroidBeltId,
+                Position = position,
+                Statistics = new (),
+                TypeId = typeId
             };
 
             return asteroidBelt;
@@ -669,7 +700,7 @@ namespace EveDataCollator
         {
             if (counter >= batchSize)
             {
-                Console.WriteLine($"Comitting batch to db.");
+                Console.WriteLine($"Commiting batch to db.");
                 edcDbContext.SaveChanges();
                 transaction.Commit();
                 transaction = edcDbContext.Database.BeginTransaction();
@@ -694,6 +725,8 @@ namespace EveDataCollator
             
             using (var context = new EdcDbContext())
             {
+                context.DropAllTables(); // Todo: Remove when no longer useful!!!
+                
                 context.Database.EnsureCreated();
                 var transaction = context.Database.BeginTransaction();
                 
@@ -701,7 +734,7 @@ namespace EveDataCollator
                 {
                     if (context.Regions.Any(r => r.Id == region.Id))
                     {
-                        context.Regions.Add(region);    
+                        context.Regions.Update(region);    
                     }
                     else
                     {

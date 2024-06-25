@@ -45,4 +45,22 @@ public class EdcDbContext : DbContext
         
         modelBuilder.Entity<Stargate>().Property(s => s.Position).HasConversion(new DecVector3Converter());
     }
+
+    public void DropAllTables()
+    {
+        // Query to generate drop table statements
+        var dropTableSql = @"
+            PRAGMA foreign_keys=OFF;
+            BEGIN TRANSACTION;
+            WITH DropStatements AS (
+                SELECT 'DROP TABLE IF EXISTS ""' || name || '"";' AS sql
+                FROM sqlite_master 
+                WHERE type = 'table' AND name NOT LIKE 'sqlite_%'
+            )
+            SELECT sql FROM DropStatements;
+            COMMIT;";
+
+        // Execute drop table statements
+        var dropStatements = Database.ExecuteSqlRaw(dropTableSql);
+    }
 }
