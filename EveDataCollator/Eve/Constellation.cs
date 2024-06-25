@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -19,10 +20,10 @@ namespace EveDataCollator.Eve
         // nameID
         // radius
         
-        public string Name { get; set; } = String.Empty; // Obsolete, handled by NameId.
-        public int Id { get; set; } // Todo: Decide if we keep Id or use ConstellationId.
+        [StringLength(128)]
+        public string Name { get; set; } = String.Empty;
+        public int Id { get; set; }
         public DecVector3 Center { get; set; }
-        public int ConstellationId { get; set; }
         public DecVector3 Max { get; set; }
         public DecVector3 Min { get; set; }
         public int NameId { get; set; }

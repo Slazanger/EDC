@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Threading.Tasks;
 using EveDataCollator.Data;
@@ -20,6 +21,7 @@ namespace EveDataCollator.Eve
         // typeID
         
         public int Id { get; set; }
+        [StringLength(128)]
         public string Name { get; set; } = String.Empty;
         public int Workforce { get; set; }
         public List<AsteroidBelt> AsteroidBelts { get; set; } = new ();
