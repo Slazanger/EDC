@@ -44,6 +44,10 @@ public class EdcDbContext : DbContext
         modelBuilder.Entity<SolarSystem>().Property(s => s.Max).HasConversion(new DecVector3Converter());
         
         modelBuilder.Entity<Stargate>().Property(s => s.Position).HasConversion(new DecVector3Converter());
+
+        modelBuilder.Entity<PlanetAttributes>().Property(p => p.Id).ValueGeneratedOnAdd();
+
+        modelBuilder.Entity<Statistics>().Property(s => s.Id).ValueGeneratedOnAdd();
     }
 
     public void DropAllTables()

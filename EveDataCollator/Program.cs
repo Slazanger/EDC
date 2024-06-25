@@ -292,27 +292,53 @@ namespace EveDataCollator
 
             foreach (var e in root.Children)
             {
-                YamlScalarNode stationIDNode = (YamlScalarNode)e["stationID"];
-                int stationID = int.Parse(stationIDNode.Value);
+                int stationId = YamlParser.ParseYamlValue(e, "stationID", YamlParser.ParseInt);
+                int constellationId = YamlParser.ParseYamlValue(e, "constellationID", YamlParser.ParseInt);
+                int corporationId = YamlParser.ParseYamlValue(e, "corporationID", YamlParser.ParseInt);
+                float dockingCostPerVolume = YamlParser.ParseYamlValue(e, "dockingCostPerVolume", YamlParser.ParseFloat);
+                float maxShipVolumeDockable = YamlParser.ParseYamlValue(e, "maxShipVolumeDockable", YamlParser.ParseFloat);
+                float officeRentalCost = YamlParser.ParseYamlValue(e, "officeRentalCost", YamlParser.ParseFloat);
+                int operationId = YamlParser.ParseYamlValue(e, "operationID", YamlParser.ParseInt);
+                int regionId = YamlParser.ParseYamlValue(e, "regionID", YamlParser.ParseInt);
+                float reprocessingEfficiency = YamlParser.ParseYamlValue(e, "reprocessingEfficiency", YamlParser.ParseFloat);
+                int reprocessingHangarFlag = YamlParser.ParseYamlValue(e, "reprocessingHangarFlag", YamlParser.ParseInt);
+                float reprocessingStationsTake = YamlParser.ParseYamlValue(e, "reprocessingStationsTake", YamlParser.ParseFloat);
+                float security = YamlParser.ParseYamlValue(e, "security", YamlParser.ParseFloat);
+                int solarSystemId = YamlParser.ParseYamlValue(e, "solarSystemId", YamlParser.ParseInt);
+                string stationName = YamlParser.ParseYamlValue(e, "stationName", YamlParser.ParseString);
+                int stationTypeId = YamlParser.ParseYamlValue(e, "stationTypeID", YamlParser.ParseInt);
 
-                YamlScalarNode solarSystemIDNode = (YamlScalarNode)e["solarSystemID"];
-                int solarSystemID = int.Parse(solarSystemIDNode.Value);
+                decimal positionX = YamlParser.ParseYamlValue(e, "x", YamlParser.ParseDecimal);
+                decimal positionY = YamlParser.ParseYamlValue(e, "y", YamlParser.ParseDecimal);
+                decimal positionZ = YamlParser.ParseYamlValue(e, "z", YamlParser.ParseDecimal);
 
-
-                YamlScalarNode stationNameNode = (YamlScalarNode)e["stationName"];
-                string stationName = stationNameNode.Value;
-
+                DecVector3 position = new DecVector3(positionX, positionY, positionZ);
+                
                 Station station = new Station()
                 {
-                    Id = stationID,
-                    Name = stationName
+                    Id = stationId,
+                    ConstellationId = constellationId,
+                    CorporationId = corporationId,
+                    DockingCostPerVolume = dockingCostPerVolume,
+                    MaxShipVolumeDockable = maxShipVolumeDockable,
+                    OfficeRentalCost = officeRentalCost,
+                    OperationId = operationId,
+                    RegionId = regionId,
+                    ReprocessingEfficiency = reprocessingEfficiency,
+                    ReprocessingHangarFlag = reprocessingHangarFlag,
+                    ReprocessingStationsTake = reprocessingStationsTake,
+                    Security = security,
+                    SolarSystemId = solarSystemId,
+                    StationName = stationName,
+                    StationTypeId = stationTypeId,
+                    Position = position
                 };
 
                 // the stations list contains all stations yet we're currently only parsing K-Space and
                 // Thera (J-space)
-                if(systems.ContainsKey(solarSystemID))
+                if(systems.ContainsKey(solarSystemId))
                 {
-                    systems[solarSystemID].Stations.Add(station);
+                    systems[solarSystemId].Stations.Add(station);
                 }
 
             }
@@ -573,17 +599,22 @@ namespace EveDataCollator
             decimal radius = YamlParser.ParseYamlValue(planetInfoNode, "radius", YamlParser.ParseDecimal);
             int typeId = YamlParser.ParseYamlValue(planetInfoNode, "typeID", YamlParser.ParseInt);
 
+            PlanetAttributes planetAttributes = ParsePlanetAttributesYaml((YamlMappingNode)planetInfoNode.Children["planetAttributes"]);
+            Statistics planetStatistics = planetInfoNode.Children.TryGetValue("statistics", out var _) 
+                ? ParseStatistics((YamlMappingNode)planetInfoNode.Children["statistics"]) 
+                : new ();
+            
             Planet planet = new Planet()
             {
                 Id = planetId,
                 Name = nameIDDictionary[planetId],
                 AsteroidBelts = new List<AsteroidBelt>(),
                 CelestialIndex = celestialIndex,
-                PlanetAttributes = new PlanetAttributes(),
+                PlanetAttributes = planetAttributes,
                 Moons = new List<Moon>(),
                 Position = position,
                 Radius = radius,
-                Statistics = new Statistics(),
+                Statistics = planetStatistics,
                 TypeId = typeId
             };
             
@@ -611,6 +642,71 @@ namespace EveDataCollator
             return planet;
         }
 
+        static Statistics ParseStatistics(YamlMappingNode statisticsNode)
+        {
+            // ToDo: Come up with update strategy for existing statistics
+            decimal age = YamlParser.ParseYamlValue(statisticsNode, "age", YamlParser.ParseDecimal);
+            float density = YamlParser.ParseYamlValue(statisticsNode, "density", YamlParser.ParseFloat);
+            float eccentricity = YamlParser.ParseYamlValue(statisticsNode, "eccentricity", YamlParser.ParseFloat);
+            float escapeVelocity = YamlParser.ParseYamlValue(statisticsNode, "escapeVelocity", YamlParser.ParseFloat);
+            bool fragmented = YamlParser.ParseYamlValue(statisticsNode, "fragmented", YamlParser.ParseBool);
+            float life = YamlParser.ParseYamlValue(statisticsNode, "life", YamlParser.ParseFloat);
+            bool locked = YamlParser.ParseYamlValue(statisticsNode, "locked", YamlParser.ParseBool);
+            decimal massDust = YamlParser.ParseYamlValue(statisticsNode, "massDust", YamlParser.ParseDecimal);
+            decimal massGas = YamlParser.ParseYamlValue(statisticsNode, "massGas", YamlParser.ParseDecimal);
+            decimal orbitPeriod = YamlParser.ParseYamlValue(statisticsNode, "orbitPeriod", YamlParser.ParseDecimal);
+            decimal orbitRadius = YamlParser.ParseYamlValue(statisticsNode, "orbitRadius", YamlParser.ParseDecimal);
+            float pressure = YamlParser.ParseYamlValue(statisticsNode, "pressure", YamlParser.ParseFloat);
+            decimal radius = YamlParser.ParseYamlValue(statisticsNode, "radius", YamlParser.ParseDecimal);
+            float rotationRate = YamlParser.ParseYamlValue(statisticsNode, "rotationRate", YamlParser.ParseFloat);
+            string spectralClass = YamlParser.ParseYamlValue(statisticsNode, "spectralClass", YamlParser.ParseString);
+            float surfaceGravity = YamlParser.ParseYamlValue(statisticsNode, "surfaceGravity", YamlParser.ParseFloat);
+            float temperature = YamlParser.ParseYamlValue(statisticsNode, "temperature", YamlParser.ParseFloat);
+            
+            Statistics statistics = new Statistics()
+            {
+                Age = age,
+                Density = density,
+                Eccentricity = eccentricity,
+                EscapeVelocity = escapeVelocity,
+                Fragmented = fragmented,
+                Life = life,
+                Locked = locked,
+                MassDust = massDust,
+                MassGas = massGas,
+                OrbitPeriod = orbitPeriod,
+                OrbitRadius = orbitRadius,
+                Pressure = pressure,
+                Radius = radius,
+                RotationRate = rotationRate,
+                SpectralClass = spectralClass,
+                SurfaceGravity = surfaceGravity,
+                Temperature = temperature
+            };
+
+            return statistics;
+        }
+        
+        static PlanetAttributes ParsePlanetAttributesYaml(YamlMappingNode planetAttributesNode)
+        {
+            // ToDo: Come up with update strategy for existing planet attributes
+            
+            int heightMap1 = YamlParser.ParseYamlValue(planetAttributesNode, "heightMap1", YamlParser.ParseInt);
+            int heightMap2 = YamlParser.ParseYamlValue(planetAttributesNode, "heightMap2", YamlParser.ParseInt);
+            bool population = YamlParser.ParseYamlValue(planetAttributesNode, "population", YamlParser.ParseBool);
+            int shaderPreset = YamlParser.ParseYamlValue(planetAttributesNode, "shaderPreset", YamlParser.ParseInt);
+
+            PlanetAttributes planetAttributes = new PlanetAttributes()
+            {
+                HeightMap1 = heightMap1,
+                HeightMap2 = heightMap2,
+                Population = population,
+                ShaderPreset = shaderPreset
+            };
+            
+            return planetAttributes;
+        }
+
         // parse a star
         static Star ParseStarYaml(YamlMappingNode starNode)
         {
@@ -622,12 +718,16 @@ namespace EveDataCollator
             int starId = YamlParser.ParseYamlValue(starNode, "id", YamlParser.ParseInt);
             decimal radius = YamlParser.ParseYamlValue(starNode, "radius", YamlParser.ParseDecimal);
             int typeId = YamlParser.ParseYamlValue(starNode, "typeID", YamlParser.ParseInt);
+            
+            Statistics starStatistics = starNode.Children.TryGetValue("statistics", out var _) 
+                ? ParseStatistics((YamlMappingNode)starNode.Children["statistics"]) 
+                : new ();
 
             Star star = new Star()
             {
                 Id = starId,
                 Radius = radius,
-                Statistics = new (),
+                Statistics = starStatistics,
                 TypeId = typeId,
                 Power = 0 // Todo: Where does this come from?
             };
@@ -655,6 +755,11 @@ namespace EveDataCollator
             DecVector3 position = ((YamlSequenceNode)moonInfoNode.Children["position"]).ToDecVector3();
             decimal radius = YamlParser.ParseYamlValue(moonInfoNode, "radius", YamlParser.ParseDecimal);
             int typeId = YamlParser.ParseYamlValue(moonInfoNode, "typeID", YamlParser.ParseInt);
+            
+            Statistics moonStatistics = moonInfoNode.Children.TryGetValue("statistics", out var _) 
+                ? ParseStatistics((YamlMappingNode)moonInfoNode.Children["statistics"]) 
+                : new ();
+            
 
             Moon moon = new Moon()
             {
@@ -663,7 +768,7 @@ namespace EveDataCollator
                 PlanetAttributes = new (),
                 Position = position,
                 Radius = radius,
-                Statistics = new (),
+                Statistics = moonStatistics,
                 TypeId = typeId
             };
 
@@ -684,12 +789,16 @@ namespace EveDataCollator
             
             DecVector3 position = ((YamlSequenceNode)asteroidBeltInfoNode.Children["position"]).ToDecVector3();
             int typeId = YamlParser.ParseYamlValue(asteroidBeltInfoNode, "typeID", YamlParser.ParseInt);
+            
+            Statistics asteroidBeltStatistics = asteroidBeltInfoNode.Children.TryGetValue("statistics", out var _) 
+                ? ParseStatistics((YamlMappingNode)asteroidBeltInfoNode.Children["statistics"]) 
+                : new ();
 
             AsteroidBelt asteroidBelt = new AsteroidBelt()
             {
                 Id = asteroidBeltId,
                 Position = position,
-                Statistics = new (),
+                Statistics = asteroidBeltStatistics,
                 TypeId = typeId
             };
 
