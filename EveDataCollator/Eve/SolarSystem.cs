@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.ComponentModel.DataAnnotations;
 using System.Text;
 using System.Threading.Tasks;
 using EveDataCollator.Data;
@@ -32,8 +33,9 @@ namespace EveDataCollator.Eve
         // sunTypeID
         // wormholeClassID
         
-        public int Id { get; set; } // Todo: Id or SolarSystemId?
-        public string Name { get; set; } = String.Empty; // Obsolete, handled by NameId?
+        public int Id { get; set; }
+        [StringLength(128)]
+        public string Name { get; set; } = String.Empty;
         public bool Border { get; set; }
         public DecVector3 Center { get; set; }
         public bool Corridor { get; set; }
@@ -48,7 +50,7 @@ namespace EveDataCollator.Eve
         public decimal Radius { get; set; }
         public bool Regional { get; set; }
         public float Security { get; set; }
-        public int SolarSystemId { get; set; }
+        // public int SolarSystemId { get; set; }
         public int SolarSystemNameId { get; set; }
         public Star Star { get; set; } = new ();
         public List<Stargate> Stargates { get; set; } = new();
