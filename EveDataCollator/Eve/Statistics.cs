@@ -12,8 +12,8 @@ namespace EveDataCollator.Eve
         public bool Fragmented { get; set; }
         public float Life { get; set; }
         public bool Locked { get; set; }
-        public decimal MassDust { get; set; }
-        public decimal MassGas { get; set; }
+        public float MassDust { get; set; }
+        public float MassGas { get; set; }
         public decimal OrbitPeriod { get; set; }
         public decimal OrbitRadius { get; set; }
         public float Pressure { get; set; }

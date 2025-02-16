@@ -652,8 +652,8 @@ namespace EveDataCollator
             bool fragmented = YamlParser.ParseYamlValue(statisticsNode, "fragmented", YamlParser.ParseBool);
             float life = YamlParser.ParseYamlValue(statisticsNode, "life", YamlParser.ParseFloat);
             bool locked = YamlParser.ParseYamlValue(statisticsNode, "locked", YamlParser.ParseBool);
-            decimal massDust = YamlParser.ParseYamlValue(statisticsNode, "massDust", YamlParser.ParseDecimal);
-            decimal massGas = YamlParser.ParseYamlValue(statisticsNode, "massGas", YamlParser.ParseDecimal);
+            float massDust = YamlParser.ParseYamlValue(statisticsNode, "massDust", YamlParser.ParseFloat);
+            float massGas = YamlParser.ParseYamlValue(statisticsNode, "massGas", YamlParser.ParseFloat);
             decimal orbitPeriod = YamlParser.ParseYamlValue(statisticsNode, "orbitPeriod", YamlParser.ParseDecimal);
             decimal orbitRadius = YamlParser.ParseYamlValue(statisticsNode, "orbitRadius", YamlParser.ParseDecimal);
             float pressure = YamlParser.ParseYamlValue(statisticsNode, "pressure", YamlParser.ParseFloat);
