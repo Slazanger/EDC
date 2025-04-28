@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 using EveDataCollator.Data;
 
 namespace EveDataCollator.EVE.Universe
@@ -16,9 +11,10 @@ namespace EveDataCollator.EVE.Universe
         // radius
         // statistics
         // typeID
-        
+
         [StringLength(128)]
         public string Name { get; set; } = string.Empty;
+
         public int Id { get; set; }
         public PlanetAttributes PlanetAttributes { get; set; } = new();
         public DecVector3 Position { get; set; }

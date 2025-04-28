@@ -1,5 +1,4 @@
-﻿using System;
-using Microsoft.EntityFrameworkCore;
+﻿using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 
 namespace EveDataCollator.EDCEF
@@ -18,7 +17,7 @@ namespace EveDataCollator.EDCEF
         {
             var context = dbSet.GetService<ICurrentDbContext>().Context;
             var existingEntity = context.Set<TEntity>().Local.FirstOrDefault(predicate);
-        
+
             if (existingEntity == null)
             {
                 dbSet.Add(entity);

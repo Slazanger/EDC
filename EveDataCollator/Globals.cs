@@ -1,13 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Reflection.Metadata;
 
 namespace EveDataCollator
 {
     public class Globals
     {
-        static public Dictionary<int, string> nameIDDictionary = default;
+        public static Dictionary<int, string> NameIDDictionary { get; set; }
+
+        static Globals()
+        {
+            NameIDDictionary = new Dictionary<int, string>();
+        }
     }
 }

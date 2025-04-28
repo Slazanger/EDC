@@ -1,25 +1,24 @@
 ﻿using System.Diagnostics;
 using System.IO.Compression;
-using YamlDotNet.RepresentationModel;
 using System.Security.Cryptography;
 using EveDataCollator.EDCEF;
-using Microsoft.EntityFrameworkCore.Storage;
 using EveDataCollator.EVE.Universe;
+using Microsoft.EntityFrameworkCore.Storage;
+using YamlDotNet.RepresentationModel;
 
 namespace EveDataCollator
 {
     internal class Program
     {
-
-        static async Task Main(string[] args)
+        private static async Task Main(string[] args)
         {
             string checksumUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/checksum";
             string SDEUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/sde.zip";
-            string localCheckSumFile = $"{System.AppContext.BaseDirectory}previous-checksum"; 
-            
+            string localCheckSumFile = $"{System.AppContext.BaseDirectory}previous-checksum";
+
             string serverSDECheckSum = await GetSdeCheckSumFromServer(checksumUrl);
             string localSDECheckSum = "";
-            
+
             string tempFolder = $"{System.AppContext.BaseDirectory}temp";
             string dataFolder = tempFolder;
 
@@ -28,7 +27,7 @@ namespace EveDataCollator
                 localSDECheckSum = File.ReadAllText(localCheckSumFile);
                 dataFolder = $"{System.AppContext.BaseDirectory}{localSDECheckSum}";
             }
-            
+
             string SDELocal = $"{dataFolder}\\sde.zip";
             bool downloadSDE = false;
 
@@ -50,8 +49,8 @@ namespace EveDataCollator
                     downloadSDE = true;
                 }
             }
-            
-            if(downloadSDE)
+
+            if (downloadSDE)
             {
                 // Clear out any temp folder
                 if (Directory.Exists(tempFolder))
@@ -59,7 +58,7 @@ namespace EveDataCollator
                     Directory.Delete(tempFolder, true);
                 }
                 Directory.CreateDirectory(tempFolder);
-                
+
                 // download latest SDE
                 await DownloadSDE(SDEUrl, SDELocal);
 
@@ -72,10 +71,10 @@ namespace EveDataCollator
                         foreach (ZipArchiveEntry entry in sdeZipArchive.Entries)
                         {
                             string destinationPath = Path.GetFullPath(Path.Combine(tempFolder, entry.FullName));
-                            string destinationDirectory = Path.GetDirectoryName(destinationPath);
+                            string? destinationDirectory = Path.GetDirectoryName(destinationPath);
                             if (!Directory.Exists(destinationDirectory))
                             {
-                                Directory.CreateDirectory(destinationDirectory);
+                                Directory.CreateDirectory(destinationDirectory!);
                             }
                             entry.ExtractToFile(destinationPath, true);
 
@@ -93,23 +92,22 @@ namespace EveDataCollator
 
                         // finalize the hash and write it to file
                         md5.TransformFinalBlock(new byte[0], 0, 0);
-                        string hashString = BitConverter.ToString(md5.Hash).Replace("-", "").ToLowerInvariant();
+                        string hashString = BitConverter.ToString(md5.Hash!).Replace("-", "").ToLowerInvariant();
                         File.WriteAllText(localCheckSumFile, hashString);
-                        
+
                         // set the correct folder
                         dataFolder = $"{System.AppContext.BaseDirectory}{hashString}";
                     }
                 }
-                
+
                 // if we downloaded data but there is a corresponding folder, delete it
                 if (Directory.Exists(dataFolder))
                 {
                     Directory.Delete(dataFolder, true);
                 }
-                
+
                 // then move the new data to the data folder
                 Directory.Move(tempFolder, dataFolder);
-                
             }
             else
             {
@@ -118,24 +116,21 @@ namespace EveDataCollator
 
             // load the string database
             LoadNameDictionary(dataFolder);
-            
+
             // collate all the universe files
             Universe.Parse(dataFolder);
 
+            Console.WriteLine($"Parsed {Universe.Regions.Count} Regions");
 
-
-
-            Console.WriteLine($"Parsed {Universe.regions.Count} regions");
-
-
-            //ExportUniverseToDB(dataFolder, regions.Values.ToList());
-            ExportUniverseToEfDb(Universe.regions.Values.ToList());
-
+            ExportUniverseToEfDb(Universe.Regions.Values.ToList());
         }
 
-
-        // get the current SDE Checksum from the 
-        static async Task<string> GetSdeCheckSumFromServer(string checksumUrl)
+        /// <summary>
+        /// Get the current Checksum for the latest released SDE
+        /// </summary>
+        /// <param name="checksumUrl">URL of the published SDE Checksum file</param>
+        /// <returns></returns>
+        private static async Task<string> GetSdeCheckSumFromServer(string checksumUrl)
         {
             // the checksum file contains a list of the contents
             // however the sde.zip is not the MD5 hash of the sde file
@@ -148,7 +143,7 @@ namespace EveDataCollator
             using (var client = new HttpClient())
             {
                 string content = await client.GetStringAsync(checksumUrl);
-                
+
                 string[] lines = content.Split('\n');
                 foreach (string line in lines)
                 {
@@ -162,19 +157,25 @@ namespace EveDataCollator
             return checksum;
         }
 
-
-        // Get the latest SDE from CCP
-        static async Task DownloadSDE(string SDEUrl, string localFile)
+        /// <summary>
+        /// Download the latest SDE from CCP
+        /// </summary>
+        /// <param name="SDEUrl">SDE URL</param>
+        /// <param name="localFile">Local File</param>
+        private static async Task DownloadSDE(string SDEUrl, string localFile)
         {
             Console.WriteLine($"Downloading Latest SDE : {SDEUrl}");
             await DownloadFile(SDEUrl, localFile);
             Console.WriteLine($"Downloaded to {localFile}");
-
         }
-       
 
-        // download file
-        static async Task DownloadFile(string fileUrl, string localFile)
+        /// <summary>
+        /// download file helper
+        /// </summary>
+        /// <param name="fileUrl">remote url</param>
+        /// <param name="localFile">local file</param>
+        /// <returns></returns>
+        private static async Task DownloadFile(string fileUrl, string localFile)
         {
             using var httpClient = new HttpClient();
             using var responseStream = await httpClient.GetStreamAsync(fileUrl);
@@ -182,11 +183,13 @@ namespace EveDataCollator
             await responseStream.CopyToAsync(fileStream);
         }
 
-
-        // parse and create the id to name dictionary
-        static void LoadNameDictionary(string rootFolder)
+        /// <summary>
+        /// parse and create the id to name dictionary which is used in most subsequent parse operations
+        /// </summary>
+        /// <param name="rootFolder">Folder with the extracted SDE in</param>
+        private static void LoadNameDictionary(string rootFolder)
         {
-            Globals.nameIDDictionary = new Dictionary<int, string>();
+            Globals.NameIDDictionary.Clear();
 
             string dictionaryFile = $"{rootFolder}\\bsd\\invNames.yaml";
 
@@ -196,22 +199,33 @@ namespace EveDataCollator
 
             var root = (YamlSequenceNode)yamlStream.Documents[0].RootNode;
 
-
             foreach (var e in root.Children)
             {
                 YamlScalarNode itemIDNode = (YamlScalarNode)e["itemID"];
+                if(itemIDNode.Value == null)
+                {
+                    Console.WriteLine($"Failed to parse item ID {e}");
+                    continue;
+                }
                 int itemID = int.Parse(itemIDNode.Value);
 
                 YamlScalarNode englishTextNode = (YamlScalarNode)e["itemName"];
+
+                if(englishTextNode.Value == null)
+                {
+                    Console.WriteLine($"Failed to parse item ID {itemID}");
+                    continue;
+                }
                 string englishText = englishTextNode.Value;
 
-                Globals.nameIDDictionary[itemID] = englishText;
+                Globals.NameIDDictionary[itemID] = englishText;
             }
         }
 
-
-
-        static void IncrementBatchSize(ref IDbContextTransaction transaction, EdcDbContext edcDbContext, ref int counter, ref int overallCounter, int batchSize)
+        /// <summary>
+        /// Increment Batch Size
+        /// </summary>
+        private static void IncrementBatchSize(ref IDbContextTransaction transaction, EdcDbContext edcDbContext, ref int counter, ref int overallCounter, int batchSize)
         {
             if (counter >= batchSize)
             {
@@ -228,32 +242,36 @@ namespace EveDataCollator
                 counter++;
             }
         }
-        
-        static void ExportUniverseToEfDb(List<Region> regionList)
+
+        /// <summary>
+        /// Export the Universe to an EntityFramework Database
+        /// </summary>
+        /// <param name="regionList">list of Regions to export</param>
+        private static void ExportUniverseToEfDb(List<Region> regionList)
         {
             Stopwatch dbStopwatch = new Stopwatch();
             int batchSize = 10000;
             int counter = 0;
             int overallCounter = 0;
-            
+
             dbStopwatch.Start();
-            
+
             using (var context = new EdcDbContext())
             {
                 context.DropAllTables(); // Todo: Remove when no longer useful!!!
-                
+
                 context.Database.EnsureCreated();
                 var transaction = context.Database.BeginTransaction();
-                
+
                 foreach (var region in regionList)
                 {
                     if (context.Regions.Any(r => r.Id == region.Id))
                     {
-                        context.Regions.Update(region);    
+                        context.Regions.Update(region);
                     }
                     else
                     {
-                        context.Regions.Add(region);   
+                        context.Regions.Add(region);
                     }
                     IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
 
@@ -261,19 +279,19 @@ namespace EveDataCollator
                     {
                         if (context.Constellations.Any(c => c.Id == constellation.Id))
                         {
-                            context.Constellations.Update(constellation);   
+                            context.Constellations.Update(constellation);
                         }
                         else
                         {
                             context.Constellations.Add(constellation);
                         }
                         IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
-                        
+
                         foreach (var system in constellation.SolarSystems)
                         {
                             if (context.SolarSystems.Any(s => s.Id == system.Id))
                             {
-                                context.SolarSystems.Update(system);   
+                                context.SolarSystems.Update(system);
                             }
                             else
                             {
@@ -283,7 +301,7 @@ namespace EveDataCollator
 
                             if (context.Stars.Any(s => s.Id == system.Star.Id))
                             {
-                                context.Stars.Update(system.Star);   
+                                context.Stars.Update(system.Star);
                             }
                             else
                             {
@@ -299,9 +317,9 @@ namespace EveDataCollator
                                 }
                                 else
                                 {
-                                    context.Planets.Add(planet);    
+                                    context.Planets.Add(planet);
                                 }
-                                
+
                                 IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
 
                                 foreach (var moon in planet.Moons)
@@ -312,9 +330,9 @@ namespace EveDataCollator
                                     }
                                     else
                                     {
-                                        context.Moons.Add(moon);    
+                                        context.Moons.Add(moon);
                                     }
-                                    
+
                                     IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
                                 }
                             }
@@ -323,31 +341,31 @@ namespace EveDataCollator
                             {
                                 if (context.Stations.Any(s => s.Id == station.Id))
                                 {
-                                    context.Stations.Update(station);    
+                                    context.Stations.Update(station);
                                 }
                                 else
                                 {
-                                    context.Stations.Add(station);    
+                                    context.Stations.Add(station);
                                 }
-                                
+
                                 IncrementBatchSize(ref transaction, context, ref counter, ref overallCounter, batchSize);
                             }
                         }
                     }
                 }
-                
+
                 context.SaveChanges();
                 transaction.Commit();
 
                 dbStopwatch.Stop();
                 TimeSpan dbExecutionTime = dbStopwatch.Elapsed;
-                
+
                 Console.WriteLine($"\nDatabase operations: {dbExecutionTime.TotalSeconds.ToString("n2")} seconds");
             }
         }
 
-        // export 
-        static void ExportUniverseToDB(string outPutfolder, List<Region> regionList)
+        // export
+        private static void ExportUniverseToDB(string outPutfolder, List<Region> regionList)
         {
             /*
             string dbPath = $"{outPutfolder}\\Universe.db";
@@ -396,11 +414,9 @@ namespace EveDataCollator
                             Name TEXT NOT NULL
                         );
 
-
                         ";
                     command.ExecuteNonQuery();
                 }
-
 
                 using (var transaction = dbConnection.BeginTransaction())
                 {
@@ -437,7 +453,6 @@ namespace EveDataCollator
                                     VALUES ('{system.Id}', '{system.Name}', '{constellation.Id}')";
                                     command.ExecuteNonQuery();
                                 }
-
 
                                 foreach (var planet in system.Planets)
                                 {

@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Linq;
 using EveDataCollator.Data;
 using EveDataCollator.EDCEF;
 using EveDataCollator.EVE.Universe;
@@ -12,13 +8,20 @@ namespace EveDataCollator
 {
     public class Universe
     {
+        public static Dictionary<int, Region> Regions { get; set; }
+        public static Dictionary<int, Planet> Planets { get; set; }
+        public static Dictionary<int, Star> Stars { get; set; }
+        public static Dictionary<int, SolarSystem> Systems { get; set; }
 
 
-        static public Dictionary<int, Region> regions = default;
-        static public Dictionary<int, Planet> planets = default;
-        static public Dictionary<int, Star> stars = default;
-        static public Dictionary<int, SolarSystem> systems = default;
-
+        static Universe()
+        {
+            Regions = [];
+            Planets = [];
+            Stars = [];
+            Systems = [];
+        }
+            
 
 
         /// <summary>
@@ -27,38 +30,48 @@ namespace EveDataCollator
         /// <param name="rootFolder">The extracted root folder of the SDE</param>
         public static void Parse(string rootFolder)
         {
-            regions = new Dictionary<int, Region>();
-            planets = new Dictionary<int, Planet>();
-            stars = new Dictionary<int, Star>();
-            systems = new Dictionary<int, SolarSystem>();
+            Regions.Clear();
+            Planets.Clear();
+            Stars.Clear();
+            Systems.Clear();
 
             // universe is in .\universe\eve\<region>\<constellation>\<system>
             string universeRoot = rootFolder + @"\universe\eve";
 
-            // regions
+            // Regions
             var matchingRegionFiles = Directory.EnumerateFiles(universeRoot, "region.yaml", SearchOption.AllDirectories);
             foreach (string regionFile in matchingRegionFiles)
             {
                 Region r = ParseRegionYaml(regionFile);
-                regions[r.Id] = r;
-
+                Regions[r.Id] = r;
 
                 // get the constellations within this folder
-                string regionDir = Path.GetDirectoryName(regionFile);
+                string? regionDir = Path.GetDirectoryName(regionFile);
+
+                if(regionDir == null)
+                {
+                    Console.WriteLine($"Error Parsing {regionFile}");
+                }
 
                 // constellations
-                // regions
-                var matchingConstellationFiles = Directory.EnumerateFiles(regionDir, "constellation.yaml", SearchOption.AllDirectories);
+                // Regions
+                var matchingConstellationFiles = Directory.EnumerateFiles(regionDir!, "constellation.yaml", SearchOption.AllDirectories);
                 foreach (string constellationFile in matchingConstellationFiles)
                 {
                     Constellation c = ParseConstellationYaml(constellationFile);
                     r.Constellations.Add(c);
 
-                    // get the systems within this folder
-                    string constellationDir = Path.GetDirectoryName(constellationFile);
+                    // get the Systems within this folder
+                    string? constellationDir = Path.GetDirectoryName(constellationFile);
+
+                    if(constellationDir == null)
+                    {
+                        Console.WriteLine($"Failed to extract directory for {constellationFile}");
+                        continue;
+                    }
 
                     // constellations
-                    // regions
+                    // Regions
                     var matchingSystemFiles = Directory.EnumerateFiles(constellationDir, "solarSystem.yaml", SearchOption.AllDirectories);
                     foreach (string systemFile in matchingSystemFiles)
                     {
@@ -68,30 +81,19 @@ namespace EveDataCollator
                 }
             }
 
-
             // After the main universe structure has been parsed we can parse the additional data
-
-
 
             // get all of the NPC stations
             ParseNPCStations(rootFolder);
 
             // extract the planet/star power/workforce data
             ParsePlanetResources(rootFolder);
-
-
         }
-
-
-
-
-
-
 
         // parse the planet resources
         private static void ParsePlanetResources(string rootFolder)
         {
-            Globals.nameIDDictionary = new Dictionary<int, string>();
+            Globals.NameIDDictionary = [];
 
             string planetResourceFile = $"{rootFolder}\\fsd\\planetResources.yaml";
 
@@ -101,11 +103,15 @@ namespace EveDataCollator
 
             var root = (YamlMappingNode)yamlStream.Documents[0].RootNode;
 
-
             foreach (var e in root.Children)
             {
                 YamlScalarNode idNode = (YamlScalarNode)e.Key;
-                int planetID = int.Parse(idNode.Value);
+
+                int planetID = -1;
+                if (idNode.Value != null)
+                {
+                    int.Parse(idNode.Value);
+                }
 
                 YamlMappingNode planetNode = (YamlMappingNode)e.Value;
 
@@ -113,35 +119,40 @@ namespace EveDataCollator
                 if (planetNode.Children.ContainsKey("power"))
                 {
                     YamlScalarNode powerNode = (YamlScalarNode)planetNode["power"];
-                    power = int.Parse(powerNode.Value);
+                    if (powerNode.Value != null)
+                    {
+                        power = int.Parse(powerNode.Value);
+                    }
                 }
 
                 int workforce = 0;
                 if (planetNode.Children.ContainsKey("workforce"))
                 {
                     YamlScalarNode workforceNode = (YamlScalarNode)planetNode["workforce"];
-                    workforce = int.Parse(workforceNode.Value);
+                    if (workforceNode.Value != null)
+                    {
+                        workforce = int.Parse(workforceNode.Value);
+                    }
                 }
 
                 // is it a planet ?
-                if (planets.ContainsKey(planetID))
+                if (Planets.ContainsKey(planetID))
                 {
-                    planets[planetID].Workforce = workforce;
+                    Planets[planetID].Workforce = workforce;
                 }
 
                 // is it a star ?
-                if (stars.ContainsKey(planetID))
+                if (Stars.ContainsKey(planetID))
                 {
-                    stars[planetID].Power = power;
+                    Stars[planetID].Power = power;
                 }
             }
         }
 
-
         // parse the planet resources
         private static void ParseNPCStations(string rootFolder)
         {
-            Globals.nameIDDictionary = new Dictionary<int, string>();
+            Globals.NameIDDictionary = [];
 
             string stationResourceFile = $"{rootFolder}\\bsd\\staStations.yaml";
 
@@ -166,7 +177,7 @@ namespace EveDataCollator
                 float reprocessingStationsTake = YamlParser.ParseYamlValue(e, "reprocessingStationsTake", YamlParser.ParseFloat);
                 float security = YamlParser.ParseYamlValue(e, "security", YamlParser.ParseFloat);
                 int solarSystemId = YamlParser.ParseYamlValue(e, "solarSystemId", YamlParser.ParseInt);
-                string stationName = YamlParser.ParseYamlValue(e, "stationName", YamlParser.ParseString);
+                string stationName = YamlParser.ParseYamlValue(e, "stationName", YamlParser.ParseString)!;
                 int stationTypeId = YamlParser.ParseYamlValue(e, "stationTypeID", YamlParser.ParseInt);
 
                 decimal positionX = YamlParser.ParseYamlValue(e, "x", YamlParser.ParseDecimal);
@@ -197,22 +208,17 @@ namespace EveDataCollator
 
                 // the stations list contains all stations yet we're currently only parsing K-Space and
                 // Thera (J-space)
-                if (systems.ContainsKey(solarSystemId))
+                if (Systems.ContainsKey(solarSystemId))
                 {
-                    systems[solarSystemId].Stations.Add(station);
+                    Systems[solarSystemId].Stations.Add(station);
                 }
-
             }
         }
-
-
- 
-
 
         // Parse the region
         private static Region ParseRegionYaml(string yamlFile)
         {
-            // The region YAML is in the format : 
+            // The region YAML is in the format :
             // center
             // - X,Y,Z
             // descriptionID
@@ -243,7 +249,7 @@ namespace EveDataCollator
             Region r = new Region()
             {
                 Id = regionId,
-                Name = Globals.nameIDDictionary[regionId],
+                Name = Globals.NameIDDictionary[regionId],
                 Center = center,
                 DescriptionId = descriptionId,
                 FactionId = 0, // Todo: Where does this come from?
@@ -252,17 +258,16 @@ namespace EveDataCollator
                 NameId = nameId,
                 Nebula = nebula,
                 WormholeClassId = wormholeClassId,
-                Constellations = new List<Constellation>()
+                Constellations = []
             };
 
             return r;
         }
 
-
         // Parse the constellation
         private static Constellation ParseConstellationYaml(string yamlFile)
         {
-            // The constellation YAML is in the format : 
+            // The constellation YAML is in the format :
             // center
             //     - X,Y,Z
             // constellationID
@@ -289,18 +294,17 @@ namespace EveDataCollator
             Constellation c = new Constellation()
             {
                 Id = constellationId,
-                Name = Globals.nameIDDictionary[constellationId],
+                Name = Globals.NameIDDictionary[constellationId],
                 Center = center,
                 Max = max,
                 Min = min,
                 NameId = nameId,
                 Radius = radius,
-                SolarSystems = new List<SolarSystem>(),
+                SolarSystems = [],
             };
 
             return c;
         }
-
 
         // Parse the system
         private static SolarSystem ParseSolarSystemYaml(string yamlFile)
@@ -318,7 +322,7 @@ namespace EveDataCollator
             //      - X,Y,Z
             // min
             //      - X,Y,Z
-            // planets
+            // Planets
             // radius
             // regional
             // security
@@ -356,41 +360,47 @@ namespace EveDataCollator
             SolarSystem solarSystem = new SolarSystem()
             {
                 Id = solarSystemId,
-                Name = Globals.nameIDDictionary[solarSystemId],
+                Name = Globals.NameIDDictionary[solarSystemId],
                 Border = border,
                 Center = center,
                 Corridor = corridor,
-                DisallowedAnchorCategories = new(), // Todo: What is this and how do we store it?
+                DisallowedAnchorCategories = [], // Todo: What is this and how do we store it?
                 Fringe = fringe,
                 Hub = hub,
                 International = international,
                 Luminosity = luminosity,
                 Max = max,
                 Min = min,
-                Planets = new List<Planet>(),
+                Planets = [],
                 Radius = radius,
                 Regional = regional,
                 Security = security,
                 SolarSystemNameId = solarSystemNameId,
                 //Star is handled below
-                Stargates = new(),
-                Stations = new(),
+                Stargates = [],
+                Stations = [],
                 SunTypeId = sunTypeId,
                 WormholeClassId = wormholeClassId
             };
 
-            systems[solarSystemId] = solarSystem;
+            Systems[solarSystemId] = solarSystem;
 
             // Parse the star
             YamlMappingNode starRootNode = (YamlMappingNode)root.Children["star"];
             solarSystem.Star = ParseStarYaml(starRootNode);
 
-
-            // parse the planets
+            // parse the Planets
             YamlMappingNode planetRootNote = (YamlMappingNode)root.Children["planets"];
-            foreach (var pn in planetRootNote.Children)
+            if (planetRootNote != null)
             {
-                solarSystem.Planets.Add(ParsePlanetYaml(pn));
+                foreach (var pn in planetRootNote.Children)
+                {
+                    solarSystem.Planets.Add(ParsePlanetYaml(pn));
+                }
+            }
+            else
+            {
+                Console.WriteLine($"{solarSystem.Name} has no planets");
             }
             return solarSystem;
         }
@@ -408,7 +418,7 @@ namespace EveDataCollator
             // statistics
             // typeID
 
-            int planetId = int.Parse((string)planetNode.Key);
+            int planetId = int.Parse((string)planetNode.Key!);
 
             YamlMappingNode planetInfoNode = (YamlMappingNode)planetNode.Value;
 
@@ -425,18 +435,18 @@ namespace EveDataCollator
             Planet planet = new Planet()
             {
                 Id = planetId,
-                Name = Globals.nameIDDictionary[planetId],
-                AsteroidBelts = new List<AsteroidBelt>(),
+                Name = Globals.NameIDDictionary[planetId],
+                AsteroidBelts = [],
                 CelestialIndex = celestialIndex,
                 PlanetAttributes = planetAttributes,
-                Moons = new List<Moon>(),
+                Moons = [],
                 Position = position,
                 Radius = radius,
                 Statistics = planetStatistics,
                 TypeId = typeId
             };
 
-            planets[planetId] = planet;
+            Planets[planetId] = planet;
 
             // parse the asteroidBelts
             if (planetInfoNode.Children.Keys.Contains("asteroidBelts"))
@@ -477,7 +487,7 @@ namespace EveDataCollator
             float pressure = YamlParser.ParseYamlValue(statisticsNode, "pressure", YamlParser.ParseFloat);
             decimal radius = YamlParser.ParseYamlValue(statisticsNode, "radius", YamlParser.ParseDecimal);
             float rotationRate = YamlParser.ParseYamlValue(statisticsNode, "rotationRate", YamlParser.ParseFloat);
-            string spectralClass = YamlParser.ParseYamlValue(statisticsNode, "spectralClass", YamlParser.ParseString);
+            string spectralClass = YamlParser.ParseYamlValue(statisticsNode, "spectralClass", YamlParser.ParseString)!;
             float surfaceGravity = YamlParser.ParseYamlValue(statisticsNode, "surfaceGravity", YamlParser.ParseFloat);
             float temperature = YamlParser.ParseYamlValue(statisticsNode, "temperature", YamlParser.ParseFloat);
 
@@ -550,16 +560,15 @@ namespace EveDataCollator
                 Power = 0 // Todo: Where does this come from?
             };
 
-            stars[starId] = star;
+            Stars[starId] = star;
 
             return star;
         }
 
-
         // parse a moon
         private static Moon ParseMoonYaml(KeyValuePair<YamlNode, YamlNode> moonNode)
         {
-            // Moons are part of the solarsystem/planets YAML and the format is:
+            // Moons are part of the solarsystem/Planets YAML and the format is:
             // planetAttributes
             // position
             //      - X,Y,Z
@@ -567,7 +576,7 @@ namespace EveDataCollator
             // statistics
             // typeID
 
-            int moonId = int.Parse((string)moonNode.Key);
+            int moonId = int.Parse((string)moonNode.Key!);
             YamlMappingNode moonInfoNode = (YamlMappingNode)moonNode.Value;
 
             DecVector3 position = ((YamlSequenceNode)moonInfoNode.Children["position"]).ToDecVector3();
@@ -578,11 +587,10 @@ namespace EveDataCollator
                 ? ParseStatistics((YamlMappingNode)moonInfoNode.Children["statistics"])
                 : new();
 
-
             Moon moon = new Moon()
             {
                 Id = moonId,
-                Name = Globals.nameIDDictionary[moonId],
+                Name = Globals.NameIDDictionary[moonId],
                 PlanetAttributes = new(),
                 Position = position,
                 Radius = radius,
@@ -596,13 +604,13 @@ namespace EveDataCollator
         // parse an asteroidBelt
         private static AsteroidBelt ParseAsteroidBeltYaml(KeyValuePair<YamlNode, YamlNode> asteroidBeltNode)
         {
-            // AsteroidBelts are part of the solarsystem/planets YAML and the format is:
+            // AsteroidBelts are part of the solarsystem/Planets YAML and the format is:
             // position
             //      - X,Y,Z
             // statistics
             // typeID
 
-            int asteroidBeltId = int.Parse((string)asteroidBeltNode.Key);
+            int asteroidBeltId = int.Parse((string)asteroidBeltNode.Key!);
             YamlMappingNode asteroidBeltInfoNode = (YamlMappingNode)asteroidBeltNode.Value;
 
             DecVector3 position = ((YamlSequenceNode)asteroidBeltInfoNode.Children["position"]).ToDecVector3();
@@ -622,8 +630,5 @@ namespace EveDataCollator
 
             return asteroidBelt;
         }
-
-
-
     }
 }

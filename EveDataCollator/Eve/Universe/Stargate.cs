@@ -8,7 +8,7 @@ namespace EveDataCollator.EVE.Universe
         // destination
         // position
         // - X, Y, Z
-        
+
         public int Id { get; set; }
         public int Destination { get; set; }
         public DecVector3 Position { get; set; }

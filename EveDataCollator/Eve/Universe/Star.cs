@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using EveDataCollator.Data;
-
-namespace EveDataCollator.EVE.Universe
+﻿namespace EveDataCollator.EVE.Universe
 {
     public class Star
     {
@@ -13,7 +6,7 @@ namespace EveDataCollator.EVE.Universe
         // radius
         // statistics
         // typeID
-        
+
         public int Id { get; set; }
         public decimal Radius { get; set; }
         public Statistics Statistics { get; set; } = new();

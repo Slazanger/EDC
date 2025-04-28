@@ -4,7 +4,6 @@ using YamlDotNet.RepresentationModel;
 
 namespace EveDataCollator.EDCEF
 {
-
     public static class YamlExtensions
     {
         public static DecVector3 ToDecVector3(this YamlSequenceNode sequenceNode)

@@ -8,7 +8,7 @@ namespace EveDataCollator.EVE.Universe
         //      - X,Y,Z
         // statistics
         // typeID
-        
+
         public int Id { get; set; }
         public DecVector3 Position { get; set; }
         public Statistics Statistics { get; set; } = new();

@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 using EveDataCollator.Data;
 
 namespace EveDataCollator.EVE.Universe
@@ -21,10 +16,12 @@ namespace EveDataCollator.EVE.Universe
         // nebula
         // regionID
         // wormholeClassID
-        
-        public int Id { get; set; } 
+
+        public int Id { get; set; }
+
         [StringLength(128)]
         public string Name { get; set; } = string.Empty; // Obsolete, handled by NameId.
+
         public DecVector3 Center { get; set; }
         public int DescriptionId { get; set; }
         public int FactionId { get; set; }
@@ -33,7 +30,7 @@ namespace EveDataCollator.EVE.Universe
         public int NameId { get; set; }
         public int Nebula { get; set; }
         public int WormholeClassId { get; set; }
-        
+
         public List<Constellation> Constellations { get; set; } = new();
     }
 }

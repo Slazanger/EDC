@@ -19,9 +19,11 @@ namespace EveDataCollator.EVE.Universe
         public float Pressure { get; set; }
         public decimal Radius { get; set; }
         public float RotationRate { get; set; }
+
         [StringLength(32)]
         public string SpectralClass { get; set; } = string.Empty;
+
         public float SurfaceGravity { get; set; }
         public float Temperature { get; set; }
-    }   
+    }
 }

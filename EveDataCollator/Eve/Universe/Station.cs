@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 using EveDataCollator.Data;
 
 namespace EveDataCollator.EVE.Universe
@@ -28,8 +23,8 @@ namespace EveDataCollator.EVE.Universe
         // x
         // y
         // z
-            
-        public int Id {  get; set; }
+
+        public int Id { get; set; }
         public int ConstellationId { get; set; }
         public int CorporationId { get; set; }
         public float DockingCostPerVolume { get; set; }
@@ -42,10 +37,11 @@ namespace EveDataCollator.EVE.Universe
         public float ReprocessingStationsTake { get; set; }
         public float Security { get; set; }
         public int SolarSystemId { get; set; }
-        [StringLength(128)] 
-        public string StationName { get; set; } = string.Empty;
-        public int StationTypeId {  get; set; }
-        public DecVector3 Position;
 
+        [StringLength(128)]
+        public string StationName { get; set; } = string.Empty;
+
+        public int StationTypeId { get; set; }
+        public DecVector3 Position;
     }
 }

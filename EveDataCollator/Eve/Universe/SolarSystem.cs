@@ -1,9 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.ComponentModel.DataAnnotations;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.ComponentModel.DataAnnotations;
 using EveDataCollator.Data;
 
 namespace EveDataCollator.EVE.Universe
@@ -22,7 +17,7 @@ namespace EveDataCollator.EVE.Universe
         //      - X,Y,Z
         // min
         //      - X,Y,Z
-        // planets
+        // Planets
         // radius
         // regional
         // security
@@ -32,10 +27,12 @@ namespace EveDataCollator.EVE.Universe
         // stargates
         // sunTypeID
         // wormholeClassID
-        
+
         public int Id { get; set; }
+
         [StringLength(128)]
         public string Name { get; set; } = string.Empty;
+
         public bool Border { get; set; }
         public DecVector3 Center { get; set; }
         public bool Corridor { get; set; }
@@ -50,9 +47,11 @@ namespace EveDataCollator.EVE.Universe
         public decimal Radius { get; set; }
         public bool Regional { get; set; }
         public float Security { get; set; }
+
         // public int SolarSystemId { get; set; }
         public int SolarSystemNameId { get; set; }
-        public Star Star { get; set; } = new ();
+
+        public Star Star { get; set; } = new();
         public List<Stargate> Stargates { get; set; } = new();
         public List<Station> Stations { get; set; } = new();
         public int SunTypeId { get; set; }

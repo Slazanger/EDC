@@ -1,12 +1,11 @@
-﻿using System;
-using System.Globalization;
+﻿using System.Globalization;
 using YamlDotNet.RepresentationModel;
 
 namespace EveDataCollator.EDCEF
 {
     public static class YamlParser
     {
-        public static T ParseYamlValue<T>(YamlNode root, string key, Func<string, T> parseFunction)
+        public static T? ParseYamlValue<T>(YamlNode root, string key, Func<string, T> parseFunction)
         {
             if (root is YamlMappingNode mappingNode)
             {
@@ -14,6 +13,11 @@ namespace EveDataCollator.EDCEF
                 {
                     try
                     {
+                        if(scalarNode.Value == null)
+                        {
+                            return default;
+                        }
+
                         return parseFunction(scalarNode.Value);
                     }
                     catch (Exception ex)
@@ -51,9 +55,13 @@ namespace EveDataCollator.EDCEF
         }
 
         public static string ParseString(string value) => value;
+
         public static bool ParseBool(string value) => bool.Parse(value);
+
         public static float ParseFloat(string value) => float.Parse(value, CultureInfo.InvariantCulture);
+
         public static decimal ParseDecimal(string value) => decimal.Parse(value, NumberStyles.Float, CultureInfo.InvariantCulture);
+
         public static int ParseInt(string value) => int.Parse(value);
     }
 }
