@@ -1,6 +1,6 @@
 ﻿using EveDataCollator.Data;
 
-namespace EveDataCollator.Eve
+namespace EveDataCollator.EVE.Universe
 {
     public class Stargate
     {

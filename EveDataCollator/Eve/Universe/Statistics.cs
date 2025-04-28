@@ -1,6 +1,6 @@
 ﻿using System.ComponentModel.DataAnnotations;
 
-namespace EveDataCollator.Eve
+namespace EveDataCollator.EVE.Universe
 {
     public class Statistics
     {
@@ -20,7 +20,7 @@ namespace EveDataCollator.Eve
         public decimal Radius { get; set; }
         public float RotationRate { get; set; }
         [StringLength(32)]
-        public string SpectralClass { get; set; } = String.Empty;
+        public string SpectralClass { get; set; } = string.Empty;
         public float SurfaceGravity { get; set; }
         public float Temperature { get; set; }
     }   

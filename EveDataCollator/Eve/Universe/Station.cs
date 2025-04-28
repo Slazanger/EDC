@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using EveDataCollator.Data;
 
-namespace EveDataCollator.Eve
+namespace EveDataCollator.EVE.Universe
 {
     public class Station
     {
@@ -43,7 +43,7 @@ namespace EveDataCollator.Eve
         public float Security { get; set; }
         public int SolarSystemId { get; set; }
         [StringLength(128)] 
-        public string StationName { get; set; } = String.Empty;
+        public string StationName { get; set; } = string.Empty;
         public int StationTypeId {  get; set; }
         public DecVector3 Position;
 

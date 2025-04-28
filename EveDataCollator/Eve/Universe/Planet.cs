@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using EveDataCollator.Data;
 
-namespace EveDataCollator.Eve
+namespace EveDataCollator.EVE.Universe
 {
     public class Planet
     {
@@ -22,7 +22,7 @@ namespace EveDataCollator.Eve
         
         public int Id { get; set; }
         [StringLength(128)]
-        public string Name { get; set; } = String.Empty;
+        public string Name { get; set; } = string.Empty;
         public int Workforce { get; set; }
         public List<AsteroidBelt> AsteroidBelts { get; set; } = new ();
         public int CelestialIndex { get; set; }

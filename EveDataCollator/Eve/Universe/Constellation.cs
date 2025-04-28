@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using EveDataCollator.Data;
 
-namespace EveDataCollator.Eve
+namespace EveDataCollator.EVE.Universe
 {
     public class Constellation
     {
@@ -21,7 +21,7 @@ namespace EveDataCollator.Eve
         // radius
         
         [StringLength(128)]
-        public string Name { get; set; } = String.Empty;
+        public string Name { get; set; } = string.Empty;
         public int Id { get; set; }
         public DecVector3 Center { get; set; }
         public DecVector3 Max { get; set; }

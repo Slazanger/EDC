@@ -1,5 +1,7 @@
-﻿using EveDataCollator.Eve;
+﻿using EveDataCollator.EVE.Universe;
 using Microsoft.EntityFrameworkCore;
+
+
 
 namespace EveDataCollator.EDCEF;
 

@@ -6,7 +6,7 @@ using System.Text;
 using System.Threading.Tasks;
 using EveDataCollator.Data;
 
-namespace EveDataCollator.Eve
+namespace EveDataCollator.EVE.Universe
 {
     public class SolarSystem
     {
@@ -35,7 +35,7 @@ namespace EveDataCollator.Eve
         
         public int Id { get; set; }
         [StringLength(128)]
-        public string Name { get; set; } = String.Empty;
+        public string Name { get; set; } = string.Empty;
         public bool Border { get; set; }
         public DecVector3 Center { get; set; }
         public bool Corridor { get; set; }
