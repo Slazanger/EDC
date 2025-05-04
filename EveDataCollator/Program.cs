@@ -117,6 +117,10 @@ namespace EveDataCollator
             // load the string database
             LoadNameDictionary(dataFolder);
 
+            // parse the inventory files
+            Inventory.Parse(dataFolder);
+
+
             // collate all the universe files
             Universe.Parse(dataFolder);
 
