@@ -1,6 +1,7 @@
 ﻿using System.Diagnostics;
 using System.IO.Compression;
 using System.Security.Cryptography;
+using System.Text.Json;
 using EveDataCollator.EDCEF;
 using EveDataCollator.EVE.Universe;
 using Microsoft.EntityFrameworkCore.Storage;
@@ -11,6 +12,31 @@ namespace EveDataCollator
     internal class Program
     {
         private static async Task Main(string[] args)
+        {
+            string latestJsonlUrl = @"https://developers.eveonline.com/static-data/tranquility/latest.jsonl";
+            
+            // Get the latest build number from the server
+            int buildNumber = await GetLatestBuildNumberAsync(latestJsonlUrl);
+            Console.WriteLine($"Latest SDE build number: {buildNumber}");
+
+            // Check if we already have this build number locally
+            string dataFolder = $"{System.AppContext.BaseDirectory}{buildNumber}";
+            
+            if (Directory.Exists(dataFolder))
+            {
+                Console.WriteLine($"Build {buildNumber} already exists locally at {dataFolder}");
+                Console.WriteLine($"Skipping download and using existing data");
+            }
+            else
+            {
+                Console.WriteLine($"Build {buildNumber} not found locally. Downloading...");
+                await DownloadSDEJsonlAsync(buildNumber, dataFolder);
+                Console.WriteLine($"Download and extraction complete. Data available at {dataFolder}");
+            }
+        }
+
+
+        private static async Task OldMain(string[] args)
         {
             string checksumUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/checksum";
             string SDEUrl = @"https://eve-static-data-export.s3-eu-west-1.amazonaws.com/tranquility/sde.zip";
@@ -127,6 +153,94 @@ namespace EveDataCollator
             Console.WriteLine($"Parsed {Universe.Regions.Count} Regions");
 
             ExportUniverseToEfDb(Universe.Regions.Values.ToList());
+        }
+
+        /// <summary>
+        /// Get the latest build number from the SDE latest.jsonl file
+        /// </summary>
+        /// <param name="latestJsonlUrl">URL of the latest.jsonl file</param>
+        /// <returns>The build number as an integer</returns>
+        private static async Task<int> GetLatestBuildNumberAsync(string latestJsonlUrl)
+        {
+            using var client = new HttpClient();
+            string content = await client.GetStringAsync(latestJsonlUrl);
+            
+            // Parse the JSONL content (single line JSON)
+            using JsonDocument doc = JsonDocument.Parse(content);
+            JsonElement root = doc.RootElement;
+            
+            if (root.TryGetProperty("buildNumber", out JsonElement buildNumberElement))
+            {
+                return buildNumberElement.GetInt32();
+            }
+            
+            throw new InvalidOperationException("Could not find buildNumber in latest.jsonl response");
+        }
+
+        /// <summary>
+        /// Download and extract the JSONL variant of the SDE for the specified build number
+        /// </summary>
+        /// <param name="buildNumber">The build number to download</param>
+        /// <param name="dataFolder">The destination folder for the extracted data</param>
+        private static async Task DownloadSDEJsonlAsync(int buildNumber, string dataFolder)
+        {
+            string sdeUrl = $"https://developers.eveonline.com/static-data/tranquility/eve-online-static-data-{buildNumber}-jsonl.zip";
+            string tempFolder = $"{System.AppContext.BaseDirectory}temp";
+            string zipFile = Path.Combine(tempFolder, $"sde-{buildNumber}-jsonl.zip");
+
+            // Clear out any temp folder
+            if (Directory.Exists(tempFolder))
+            {
+                Directory.Delete(tempFolder, true);
+            }
+            Directory.CreateDirectory(tempFolder);
+
+            // Download the SDE zip file
+            Console.WriteLine($"Downloading SDE from: {sdeUrl}");
+            await DownloadFile(sdeUrl, zipFile);
+            Console.WriteLine($"Downloaded to: {zipFile}");
+
+            // Extract the zip file
+            Console.WriteLine("Extracting SDE zip file...");
+            using (ZipArchive sdeZipArchive = ZipFile.OpenRead(zipFile))
+            {
+                string extractPath = Path.Combine(tempFolder, "extracted");
+                Directory.CreateDirectory(extractPath);
+
+                foreach (ZipArchiveEntry entry in sdeZipArchive.Entries)
+                {
+                    string destinationPath = Path.GetFullPath(Path.Combine(extractPath, entry.FullName));
+                    string? destinationDirectory = Path.GetDirectoryName(destinationPath);
+                    
+                    if (!string.IsNullOrEmpty(destinationDirectory) && !Directory.Exists(destinationDirectory))
+                    {
+                        Directory.CreateDirectory(destinationDirectory);
+                    }
+
+                    // Only extract files (not directories)
+                    if (!string.IsNullOrEmpty(entry.Name))
+                    {
+                        entry.ExtractToFile(destinationPath, true);
+                    }
+                }
+
+                // Move extracted data to the final build number folder
+                if (Directory.Exists(dataFolder))
+                {
+                    Directory.Delete(dataFolder, true);
+                }
+                Directory.Move(extractPath, dataFolder);
+            }
+
+            // Clean up temporary files
+            if (File.Exists(zipFile))
+            {
+                File.Delete(zipFile);
+            }
+            if (Directory.Exists(tempFolder))
+            {
+                Directory.Delete(tempFolder, true);
+            }
         }
 
         /// <summary>
