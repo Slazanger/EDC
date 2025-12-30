@@ -14,11 +14,11 @@ namespace EveDataCollator.Eve.Inventory
 
         public string Description { get; set; } = string.Empty;
 
+        public int CategoryId { get; set; } = 0;
 
         public int GroupId { get; set; }
 
         public string GroupName { get; set; } = string.Empty;
-
 
         public int MarketGroupID { get; set; }
 
